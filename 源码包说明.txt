@@ -1,0 +1,13 @@
+Half Mc Launcher 0.1.0 r4
+
+此归档为当前项目源码快照。
+包含源码、锁定依赖清单、构建资源、测试脚本与文档。
+不含 node_modules、游戏文件、测试 Java、账户数据及发行安装包。
+
+构建：安装 Node.js 24，在项目目录执行 npm ci，然后 npm run build。
+启动：npm start。Windows 便携包：npm run dist。
+
+产品名已统一为 Half Mc Launcher（窗口标题、品牌区、日志、打包产物名）。为兼容旧配置与脚本，
+内部环境变量（HAKF_DATA_DIR、HAKF_DEV_URL、HAKF_MICROSOFT_CLIENT_ID）和 IPC 通道名保留 HAKF。
+微软登录已内置 Prism Launcher 公开的公共客户端 ID，开箱即可登录，无需用户填写应用 ID。
+如需换成自己的应用：设置 → Microsoft 正版登录，或在 data/client-id.txt 写入一行 Client ID。
