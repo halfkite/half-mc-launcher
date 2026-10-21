@@ -18,6 +18,7 @@ namespace HalfMcLauncher
         [DllImport("user32.dll")] private static extern IntPtr SendMessage(IntPtr hWnd, int msg, int wParam, int lParam);
 
         private readonly ConfigStore store;
+        private readonly LaunchService launch;
         private ScanResult scan;
         private WebView2 web;
         private bool closing;
@@ -26,6 +27,7 @@ namespace HalfMcLauncher
         {
             store = ConfigStore.Load();
             scan = InstanceScanner.Scan(store.State);
+            launch = new LaunchService(store, (type, data) => SendEvent(type, data), () => BuildSnapshot());
 
             Text = "Half Mc Launcher";
             FormBorderStyle = FormBorderStyle.None;
@@ -37,18 +39,27 @@ namespace HalfMcLauncher
             Shown += async (sender, args) => await InitializeBrowserAsync();
             ApplyRememberedBounds();
             FormClosing += OnClosing;
+            launch.Log("Half Mc Launcher 0.1.0 已就绪");
         }
 
         internal ConfigStore Store { get { return store; } }
+        internal LaunchService Launch { get { return launch; } }
 
         internal JObject BuildSnapshot()
         {
+            var instances = new JArray();
+            foreach (var instance in scan.Instances)
+            {
+                var entry = (JObject)instance.DeepClone();
+                entry["running"] = launch.IsRunning(entry.Value<string>("id"));
+                instances.Add(entry);
+            }
             return new JObject
             {
                 ["state"] = store.State,
-                ["instances"] = new JArray(scan.Instances),
-                ["tasks"] = new JArray(),
-                ["logs"] = new JArray(),
+                ["instances"] = instances,
+                ["tasks"] = new JArray(launch.Tasks),
+                ["logs"] = new JArray(launch.Logs),
                 ["dataPath"] = AppPaths.DataDir,
                 ["appVersion"] = "0.1.0",
                 ["memoryMb"] = SystemMemory.TotalMegabytes(),
@@ -170,6 +181,13 @@ namespace HalfMcLauncher
             var status = new MemoryStatus { Length = (uint)Marshal.SizeOf(typeof(MemoryStatus)) };
             if (!GlobalMemoryStatusEx(status)) return 0;
             return (int)(status.TotalPhysical / 1024 / 1024);
+        }
+
+        public static int AvailableMegabytes()
+        {
+            var status = new MemoryStatus { Length = (uint)Marshal.SizeOf(typeof(MemoryStatus)) };
+            if (!GlobalMemoryStatusEx(status)) return 0;
+            return (int)(status.AvailablePhysical / 1024 / 1024);
         }
     }
 }

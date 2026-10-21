@@ -108,11 +108,11 @@ npm run dist                   # Windows 便携 EXE
 
 ## 重构分支：C# + WebView2 外壳
 
-`refactor/desktop` 分支用 **.NET Framework 4.8 + WebView2** 替换 Electron：界面仍然是同一份 Vue 构建产物，宿主负责窗口、数据目录和 IPC。当前为预览版，产物解压后 **2.39 MB**、zip **0.72 MB**，已接入实例扫描、设置/工作区、离线账户与窗口控制；游戏启动、加载器安装、资源下载、微软登录尚未接入。
+`refactor/desktop` 分支用 **.NET Framework 4.8 + WebView2** 替换 Electron：界面仍然是同一份 Vue 构建产物，宿主负责窗口、数据目录和 IPC。当前产物解压后 **4.21 MB**、zip **1.43 MB**，已接入实例扫描、设置/工作区、离线账户、Java 检测与游戏启动；加载器安装、资源下载、微软登录尚未接入。
 
 ```text
 npm run desktop        # 编译并打包 dist-desktop/Half-Mc-Launcher-0.1.0-win-x64.zip
-npm run desktop:test   # 实例扫描与配置读写的冒烟测试
+npm run desktop:test   # 扫描 / 配置 / Java 检测 / 启动参数的冒烟测试
 ```
 
 细节与后续阶段见 `desktop/README.md`。

@@ -41,7 +41,7 @@ namespace HalfMcLauncher
             core.Navigate("https://app.local/index.html");
         }
 
-        private void OnWebMessage(object sender, CoreWebView2WebMessageReceivedEventArgs e)
+        private async void OnWebMessage(object sender, CoreWebView2WebMessageReceivedEventArgs e)
         {
             JObject message;
             try { message = JObject.Parse(e.WebMessageAsJson); }
@@ -57,8 +57,8 @@ namespace HalfMcLauncher
 
             try
             {
-                var value = HostApi.Handle(method, message["payload"]);
-                Post(new JObject { ["id"] = id, ["ok"] = true, ["value"] = value == null ? JValue.CreateNull() : JToken.FromObject(value) });
+                var value = await HostApi.HandleAsync(method, message["payload"]);
+                Post(new JObject { ["id"] = id, ["ok"] = true, ["value"] = value ?? JValue.CreateNull() });
             }
             catch (Exception error)
             {
@@ -74,6 +74,13 @@ namespace HalfMcLauncher
 
         internal void SendEvent(string type, object data)
         {
+            // 进程输出、退出事件在后台线程触发，WebView2 只允许在 UI 线程调用。
+            if (InvokeRequired)
+            {
+                try { BeginInvoke(new Action(() => SendEvent(type, data))); } catch (InvalidOperationException) { }
+                return;
+            }
+            if (IsDisposed || web?.CoreWebView2 == null) return;
             Post(new JObject { ["type"] = type, ["data"] = data == null ? JValue.CreateNull() : JToken.FromObject(data) });
         }
 

@@ -1,24 +1,26 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Newtonsoft.Json.Linq;
 
 namespace HalfMcLauncher
 {
     /// <summary>
-    /// 第一版只接入“外壳 + 浏览实例 + 设置”所需的方法；其余方法返回空数据或明确提示，
-    /// 避免界面在未实现的页面上崩溃。
+    /// 外壳对外暴露的 IPC。已接入的方法覆盖实例浏览、设置、账户、Java 与启动；
+    /// 未接入的方法返回空数据或明确提示，避免界面在未实现的页面上崩溃。
     /// </summary>
     internal static class HostApi
     {
         private static MainForm Form { get { return Program.MainWindow; } }
         private static ConfigStore Store { get { return Program.MainWindow.Store; } }
 
-        internal static JToken Handle(string method, JToken payload)
+        internal static async Task<JToken> HandleAsync(string method, JToken payload)
         {
             switch (method)
             {
@@ -215,12 +217,72 @@ namespace HalfMcLauncher
                         return new JValue(true);
                     }
 
+                case "java.detect":
+                    return await DetectJava();
+
+                case "java.choose":
+                    {
+                        using (var dialog = new OpenFileDialog { Title = "选择 Java 可执行文件", Filter = "Java 可执行文件|java.exe|所有文件|*.*" })
+                        {
+                            return dialog.ShowDialog(Form) == DialogResult.OK ? new JValue(dialog.FileName) : JValue.CreateNull();
+                        }
+                    }
+
+                case "java.addFolder":
+                    {
+                        using (var dialog = new FolderBrowserDialog { Description = "选择 Java 所在目录（扫描最多 5 层）" })
+                        {
+                            if (dialog.ShowDialog(Form) != DialogResult.OK) return JValue.CreateNull();
+                            var settings = Store.Settings;
+                            var roots = settings["javaRoots"] as JArray ?? new JArray();
+                            var directory = InstanceScanner.canonical(dialog.SelectedPath);
+                            if (!roots.Any(item => string.Equals(item.ToString(), directory, StringComparison.OrdinalIgnoreCase)))
+                            {
+                                if (roots.Count >= 30) throw new InvalidOperationException("最多添加 30 个 Java 搜索目录");
+                                roots.Add(directory);
+                                settings["javaRoots"] = roots;
+                                Store.Save();
+                                Form.SendEvent("snapshot", Form.BuildSnapshot());
+                            }
+                            return await DetectJava();
+                        }
+                    }
+
+                case "java.removeFolder":
+                    {
+                        var settings = Store.Settings;
+                        var roots = settings["javaRoots"] as JArray ?? new JArray();
+                        var target = roots.FirstOrDefault(item => item.ToString() == payload?.ToString());
+                        if (target != null) roots.Remove(target);
+                        settings["javaRoots"] = roots;
+                        Store.Save();
+                        Form.SendEvent("snapshot", Form.BuildSnapshot());
+                        return await DetectJava();
+                    }
+
+                case "instance.launch":
+                    {
+                        var instance = FindInstance(payload?.ToString());
+                        return await Form.Launch.LaunchAsync(instance);
+                    }
+
+                case "instance.stop":
+                    {
+                        var instance = FindInstance(payload?.ToString());
+                        var id = instance.Value<string>("id");
+                        if (!Form.Launch.IsRunning(id)) throw new InvalidOperationException("游戏尚未运行");
+                        var confirm = MessageBox.Show(Form, "结束“" + instance.Value<string>("name") + "”的游戏进程？\n\n尚未保存的游戏进度可能丢失，建议优先在游戏中退出。",
+                            "结束游戏", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
+                        if (confirm != DialogResult.OK) return new JValue(false);
+                        Form.Launch.Stop(id);
+                        return new JValue(true);
+                    }
+
                 // 以下页面尚未接入：返回空数据，界面显示空状态而不是报错。
                 case "versions": return new JArray();
                 case "loaders.list": return new JArray();
                 case "plugins.list": return new JArray();
                 case "mods.list": return new JArray();
-                case "java.detect": return new JArray();
                 case "task.cancel": return new JValue(true);
                 case "resource.configure": return new JValue(false);
                 case "logs.export": return new JValue(false);
@@ -237,6 +299,28 @@ namespace HalfMcLauncher
                 default:
                     throw new NotSupportedException("当前是 C# 重构预览版，此功能尚未接入：" + method);
             }
+        }
+
+        private static Task<JToken> DetectJava()
+        {
+            var settings = Store.Settings;
+            var extra = new List<string> { settings.Value<string>("java") };
+            var options = Store.State["options"] as JObject;
+            if (options != null)
+                foreach (var property in options.Properties())
+                {
+                    var value = property.Value?["java"]?.ToString();
+                    if (!string.IsNullOrWhiteSpace(value)) extra.Add(value);
+                }
+            var roots = (settings["javaRoots"] as JArray ?? new JArray()).Select(item => item.ToString()).ToList();
+            return Task.Run<JToken>(() => new JArray(JavaDetector.Discover(extra, roots)));
+        }
+
+        private static JObject FindInstance(string id)
+        {
+            var instance = Form.Rescan().Instances.FirstOrDefault(item => item.Value<string>("id") == id);
+            if (instance == null) throw new InvalidOperationException("此实例已不存在，请重新扫描");
+            return instance;
         }
 
         private static string OfflineUuid(string name)

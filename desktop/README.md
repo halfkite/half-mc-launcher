@@ -23,21 +23,26 @@
 - `data/config.json` 与 Electron 版完全兼容：保留未知字段，原子写入，损坏时备份
 - 实例扫描：`versions` 根识别、`instanceId`（sha256 前 24 位）、加载器识别、损坏版本提示、隐藏实例、独立游戏目录判定
 - 设置/外观/工作区/预设保存、目录登记与移除、离线账户（标准 OfflinePlayer UUID）、打开目录与网页
+- **Java 检测**：PATH、`JAVA_HOME`、常见安装目录与用户搜索目录，`-XshowSettings:properties` 读取版本/架构
+- **启动游戏**：CmlLib.Core 构建启动参数（离线会话、内存、Java、natives），进程输出接入日志与任务中心，支持结束进程
 - 未接入的方法返回空数据或明确提示，而不是让界面崩溃
 
-尚未接入（后续阶段）：游戏启动、加载器安装、资源下载、Java 检测、微软登录、Mod 管理、插件。
+尚未接入（后续阶段）：加载器安装、资源下载、微软登录、Mod 管理、插件、版本清单页。
 
 ## 构建与打包
 
 ```text
 npm run desktop        # 编译 C# 外壳并打包 dist-desktop/Half-Mc-Launcher-0.1.0-win-x64.zip
-npm run desktop:test   # 运行实例扫描 / 配置读写的冒烟测试
+npm run desktop:test   # 运行实例扫描 / 配置读写 / Java 检测 / 启动参数构建的冒烟测试
 ```
 
 要求：Windows + .NET Framework 4.8（系统自带）+ WebView2 运行时；构建需要 .NET SDK 8 或更高，
 可用 `DOTNET_EXE` 指定 `dotnet.exe` 路径。
 
-当前产物：解压后 2.39 MB，zip 0.72 MB。
+当前产物：解压后 4.21 MB，zip 1.43 MB。
+
+冒烟测试支持两个可选环境变量：`HALF_TEST_JAVA` 指定真实的 java.exe，`HALF_TEST_MINECRAFT` 指定真实
+`.minecraft`（默认使用内置的合成版本描述，不触碰真实游戏目录）。
 
 ## 约定
 
@@ -47,8 +52,8 @@ npm run desktop:test   # 运行实例扫描 / 配置读写的冒烟测试
 
 ## 下一阶段
 
-1. 引入 `CmlLib.Core`（PCL 同款思路）：版本清单、libraries/natives/assets 下载、启动参数、Java 检测
-2. 微软登录：WebView2 内嵌授权页或系统浏览器 + 本机回环回调，令牌用 DPAPI 加密
-3. 加载器安装：Fabric/Quilt 走 JSON profile，Forge/NeoForge 调用 installer jar，OptiFine 解包
-4. 资源下载：Modrinth / CurseForge
-5. 单文件化（Costura 或 ILMerge）把 dll 收进 exe，进一步压缩到单文件约 1.4 MB
+1. 微软登录：WebView2 内嵌授权页或系统浏览器 + 本机回环回调，令牌用 DPAPI 加密
+2. 加载器安装：Fabric/Quilt 走 JSON profile，Forge/NeoForge 调用 installer jar，OptiFine 解包
+3. 资源下载：Modrinth / CurseForge
+4. 下载页：Mojang 版本清单与安装任务
+5. 单文件化（Costura 或 ILMerge）把 dll 收进 exe，进一步压缩到单文件约 2 MB

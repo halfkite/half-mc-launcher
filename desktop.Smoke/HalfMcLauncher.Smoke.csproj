@@ -12,8 +12,10 @@
     <Compile Include="..\desktop\AppPaths.cs" Link="AppPaths.cs" />
     <Compile Include="..\desktop\ConfigStore.cs" Link="ConfigStore.cs" />
     <Compile Include="..\desktop\Instances.cs" Link="Instances.cs" />
+    <Compile Include="..\desktop\JavaDetector.cs" Link="JavaDetector.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="CmlLib.Core" Version="4.1.0" />
   </ItemGroup>
 </Project>
