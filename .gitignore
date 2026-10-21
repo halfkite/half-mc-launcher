@@ -2,8 +2,13 @@ node_modules/
 dist/
 dist-electron/
 release/
+dist-desktop/
 data/
 test-results/
 playwright-report/
 .test-install/
 *.log
+desktop/bin/
+desktop/obj/
+desktop.Smoke/bin/
+desktop.Smoke/obj/

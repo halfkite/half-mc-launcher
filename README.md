@@ -104,6 +104,17 @@ npm run dist                   # Windows 便携 EXE
 - 只保留 `zh-CN`/`en-US` 两个语言包；
 - 最高压缩级别（7z/LZMA）。
 
-即便如此，Electron 便携包的下限仍在 80–90 MB。要做到 HMCL（Java，依赖本机 JRE）或 PCL2（C#/.NET，依赖系统 .NET）那种几 MB 到几十 MB 的体积，只能换掉 Electron：把外壳换成 Tauri（WebView2，约 10 MB），但主进程的下载、Java、账户、启动逻辑需要重写。
+即便如此，Electron 便携包的下限仍在 80–90 MB。要做到 HMCL（Java，依赖本机 JRE）或 PCL2（C#/.NET，依赖系统 .NET）那种几 MB 到几十 MB 的体积，只能换掉外壳。
+
+## 重构分支：C# + WebView2 外壳
+
+`refactor/desktop` 分支用 **.NET Framework 4.8 + WebView2** 替换 Electron：界面仍然是同一份 Vue 构建产物，宿主负责窗口、数据目录和 IPC。当前为预览版，产物解压后 **2.39 MB**、zip **0.72 MB**，已接入实例扫描、设置/工作区、离线账户与窗口控制；游戏启动、加载器安装、资源下载、微软登录尚未接入。
+
+```text
+npm run desktop        # 编译并打包 dist-desktop/Half-Mc-Launcher-0.1.0-win-x64.zip
+npm run desktop:test   # 实例扫描与配置读写的冒烟测试
+```
+
+细节与后续阶段见 `desktop/README.md`。
 
 采用 Electron、Vue 3、TypeScript、XMCL、MSAL。锁文件固定实际依赖。XMCL 上游发布包的元数据修正见 `docs/DEPENDENCY-FIXES.md`，由 `npm ci` 后的准备脚本自动执行。运行时依赖的第三方声明随包分发。

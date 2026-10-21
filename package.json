@@ -23,7 +23,9 @@
     "test:install": "node scripts/install-smoke.mjs",
     "test:features": "node scripts/features-smoke.mjs",
     "test:loaders": "node scripts/r4-smoke.mjs",
-    "test:auth": "node scripts/r4-auth-smoke.mjs"
+    "test:auth": "node scripts/r4-auth-smoke.mjs",
+    "desktop": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/desktop-package.ps1",
+    "desktop:test": "dotnet run --project desktop.Smoke/HalfMcLauncher.Smoke.csproj -c Release"
   },
   "devDependencies": {
     "@azure/msal-node": "7.1.0",
