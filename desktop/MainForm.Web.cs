@@ -13,7 +13,8 @@ namespace HalfMcLauncher
     {
         private async System.Threading.Tasks.Task InitializeBrowserAsync()
         {
-            web = new WebView2 { Dock = System.Windows.Forms.DockStyle.Fill, DefaultBackgroundColor = System.Drawing.Color.FromArgb(14, 17, 16) };
+            var light = !string.Equals(store.Settings.Value<string>("theme"), "dark", StringComparison.OrdinalIgnoreCase);
+            web = new WebView2 { Dock = System.Windows.Forms.DockStyle.Fill, DefaultBackgroundColor = light ? System.Drawing.Color.FromArgb(246, 248, 246) : System.Drawing.Color.FromArgb(14, 17, 16) };
             Controls.Add(web);
             web.CoreWebView2InitializationCompleted += OnBrowserReady;
             var options = new CoreWebView2EnvironmentOptions();
@@ -112,18 +113,17 @@ namespace HalfMcLauncher
   };
   document.addEventListener('mousedown', function (event) {
     if (event.button !== 0) return;
-    var bar = event.target.closest && event.target.closest('.titlebar');
-    if (bar && !(event.target.closest && event.target.closest('button, input, a, .window-controls'))) {
-      window.chrome.webview.postMessage({ type: 'window.drag' }); return;
-    }
-    if (event.target.closest && event.target.closest('.modal, .command-modal, .dropdown')) return;
-    var edge = '';
     var size = 6, x = event.clientX, y = event.clientY, w = window.innerWidth, h = window.innerHeight;
+    var edge = '';
     if (y <= size) edge = x <= size ? 'topleft' : x >= w - size ? 'topright' : 'top';
     else if (y >= h - size) edge = x <= size ? 'bottomleft' : x >= w - size ? 'bottomright' : 'bottom';
     else if (x <= size) edge = 'left';
     else if (x >= w - size) edge = 'right';
-    if (edge) window.chrome.webview.postMessage({ type: 'window.resize', edge: edge });
+    if (edge) { window.chrome.webview.postMessage({ type: 'window.resize', edge: edge }); return; }
+    var bar = event.target.closest && event.target.closest('.titlebar');
+    if (bar && !(event.target.closest && event.target.closest('button, input, a, .window-controls'))) {
+      window.chrome.webview.postMessage({ type: 'window.drag' });
+    }
   }, true);
   document.documentElement.dataset.desktop = 'webview2';
 })();

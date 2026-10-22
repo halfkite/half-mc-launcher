@@ -16,12 +16,16 @@ namespace HalfMcLauncher
 
         [DllImport("user32.dll")] private static extern bool ReleaseCapture();
         [DllImport("user32.dll")] private static extern IntPtr SendMessage(IntPtr hWnd, int msg, int wParam, int lParam);
+        [DllImport("dwmapi.dll")] private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
+        [DllImport("gdi32.dll")] private static extern IntPtr CreateRoundRectRgn(int left, int top, int right, int bottom, int width, int height);
+        [DllImport("gdi32.dll")] private static extern bool DeleteObject(IntPtr handle);
 
         private readonly ConfigStore store;
         private readonly LaunchService launch;
         private ScanResult scan;
         private WebView2 web;
         private bool closing;
+        private bool applyingCorners;
 
         public MainForm()
         {
@@ -31,7 +35,8 @@ namespace HalfMcLauncher
 
             Text = "Half Mc Launcher";
             FormBorderStyle = FormBorderStyle.None;
-            BackColor = Color.FromArgb(14, 17, 16);
+            var dark = string.Equals(store.Settings.Value<string>("theme"), "dark", StringComparison.OrdinalIgnoreCase);
+            BackColor = dark ? Color.FromArgb(14, 17, 16) : Color.FromArgb(246, 248, 246);
             MinimumSize = new Size(1050, 680);
             StartPosition = FormStartPosition.CenterScreen;
             DoubleBuffered = true;
@@ -41,6 +46,56 @@ namespace HalfMcLauncher
             FormClosing += OnClosing;
             launch.Log("Half Mc Launcher " + Program.Version + " 已就绪");
             Diagnostics.Write("form constructed");
+        }
+
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            ApplyCorners();
+        }
+
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            ApplyCorners();
+        }
+
+        /// <summary>Windows 11 用 DWM 圆角；Windows 10 退化为窗口区域裁剪。</summary>
+        private void ApplyCorners()
+        {
+            if (!IsHandleCreated || applyingCorners) return;
+            applyingCorners = true;
+            try
+            {
+                var maximized = WindowState == FormWindowState.Maximized;
+                var radius = (int)Math.Round(10 * (DeviceDpi / 96.0));
+                // Windows 11 支持 DWM 圆角；Windows 10 上这个属性不存在，改用区域裁剪。
+                var preference = maximized ? 1 : 2;
+                if (DwmSetWindowAttribute(Handle, 33, ref preference, sizeof(int)) == 0)
+                {
+                    var region = Region;
+                    Region = null;
+                    region?.Dispose();
+                    return;
+                }
+                if (maximized)
+                {
+                    var expanded = Region;
+                    Region = null;
+                    expanded?.Dispose();
+                    return;
+                }
+                var handle = CreateRoundRectRgn(0, 0, Width + 1, Height + 1, radius * 2, radius * 2);
+                var previous = Region;
+                Region = Region.FromHrgn(handle);
+                DeleteObject(handle);
+                previous?.Dispose();
+            }
+            catch { }
+            finally
+            {
+                applyingCorners = false;
+            }
         }
 
         internal ConfigStore Store { get { return store; } }
