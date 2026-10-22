@@ -127,6 +127,7 @@ namespace HalfMcLauncher
                 ["memoryMb"] = SystemMemory.TotalMegabytes(),
                 ["scanWarnings"] = new JArray(scan.Warnings),
                 ["maximized"] = WindowState == FormWindowState.Maximized,
+                ["startupInstance"] = Program.StartupInstance ?? string.Empty,
                 ["authConfigured"] = true,
                 ["authClientId"] = MicrosoftAuth.ClientId(),
                 ["authSource"] = MicrosoftAuth.ClientIdSource()

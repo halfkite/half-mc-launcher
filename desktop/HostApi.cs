@@ -652,6 +652,31 @@ namespace HalfMcLauncher
                         return await VersionCheck.RepairAsync(FindInstance(request.Value<string>("id")), message => Form.SendEvent("repairProgress", message), CancellationToken.None);
                     }
 
+                case "shortcut.exportPath":
+                    {
+                        var request = payload as JObject ?? new JObject();
+                        return Shortcuts.Export(FindInstance(request.Value<string>("id")), request.Value<string>("kind") ?? "lnk", request.Value<string>("path"));
+                    }
+
+                case "shortcut.export":
+                    {
+                        var request = payload as JObject ?? new JObject();
+                        var instance = FindInstance(request.Value<string>("id"));
+                        var kind = request.Value<string>("kind") ?? "lnk";
+                        var name = instance.Value<string>("name") ?? "Half 实例";
+                        foreach (var invalid in Path.GetInvalidFileNameChars()) name = name.Replace(invalid, '_');
+                        using (var dialog = new SaveFileDialog
+                        {
+                            Filter = kind == "bat" ? "批处理|*.bat" : "快捷方式|*.lnk",
+                            FileName = name + (kind == "bat" ? ".bat" : ".lnk"),
+                            InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory)
+                        })
+                        {
+                            if (dialog.ShowDialog(Form) != DialogResult.OK) return JValue.CreateNull();
+                            return Shortcuts.Export(instance, kind, dialog.FileName);
+                        }
+                    }
+
                 case "task.cancel": return new JValue(Form.Launch.CancelTask(payload?.ToString()));
                 case "logs.export": return new JValue(false);
 

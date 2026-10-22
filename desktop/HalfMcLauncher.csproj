@@ -12,10 +12,10 @@
     <LangVersion>latest</LangVersion>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
-    <Version>0.1.0-r92</Version>
+    <Version>0.1.0-r93</Version>
     <AssemblyVersion>0.1.0.0</AssemblyVersion>
-    <FileVersion>0.1.0.92</FileVersion>
-    <InformationalVersion>0.1.0-r92</InformationalVersion>
+    <FileVersion>0.1.0.93</FileVersion>
+    <InformationalVersion>0.1.0-r93</InformationalVersion>
     <Product>Half Mc Launcher</Product>
     <Company>Half</Company>
   </PropertyGroup>
@@ -35,6 +35,7 @@
     <Reference Include="System.IO.Compression.FileSystem" />
     <Reference Include="System.Security" />
     <Reference Include="Microsoft.VisualBasic" />
+    <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
 
   <!-- 前端沿用现有 Vue 构建产物：编译进 exe，首次启动解压到 data/web。 -->

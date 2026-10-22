@@ -14,6 +14,7 @@ namespace HalfMcLauncher
     internal static class Program
     {
         internal static MainForm MainWindow { get; private set; }
+        internal static string StartupInstance { get; private set; }
 
         /// <summary>发行标记，形如 0.1.0-r6，取自程序集 InformationalVersion。</summary>
         internal static string Version
@@ -32,6 +33,11 @@ namespace HalfMcLauncher
         private static int Main(string[] args)
         {
             Diagnostics.Write("start pid=" + System.Diagnostics.Process.GetCurrentProcess().Id + " args=" + string.Join(" ", args ?? Array.Empty<string>()));
+            for (var index = 0; index < (args?.Length ?? 0); index++)
+            {
+                if (args[index] == "--instance" && index + 1 < args.Length) StartupInstance = args[index + 1];
+                else if (args[index].StartsWith("--instance=", StringComparison.OrdinalIgnoreCase)) StartupInstance = args[index].Substring("--instance=".Length);
+            }
             try
             {
                 AppPaths.Initialize();

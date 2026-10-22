@@ -98,13 +98,15 @@ function keydown(event:KeyboardEvent){
   else if(event.key==='/'&&!input){event.preventDefault();workspaceElement.value?.querySelector<HTMLElement>(`[data-pane="${activePane.value.id}"] input[aria-label="搜索实例"]`)?.focus()}
 }
 
+let startupLaunched=false
+function maybeLaunchStartup(snap:any){const id=snap?.startupInstance;if(!id||startupLaunched)return;startupLaunched=true;void run(id+'launch','instance.launch',id).catch(()=>{})}
 onMounted(async()=>{
   measureNav()
   // 启动时如果窗口就是最大化状态，快照里要带上，否则最大化按钮不会显示“还原”。
-  api<any>('snapshot').then(snap=>{maximized.value=!!snap?.maximized}).catch(()=>{})
+  api<any>('snapshot').then(snap=>{maximized.value=!!snap?.maximized;maybeLaunchStartup(snap)}).catch(()=>{})
   window.addEventListener('resize',measureNav)
   stopEvents=window.launcher?.onEvent(async event=>{
-    if(event.type==='snapshot'){applySnapshot(event.data);maximized.value=!!(event.data as any)?.maximized}
+    if(event.type==='snapshot'){applySnapshot(event.data);maximized.value=!!(event.data as any)?.maximized;maybeLaunchStartup(event.data)}
     if(event.type==='tasks')data.tasks=event.data
     if(event.type==='log'){data.logs.push(event.data);if(data.logs.length>1500)data.logs.splice(0,data.logs.length-1500)}
     if(event.type==='notice')toast(event.data)
