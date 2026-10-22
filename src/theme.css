@@ -446,3 +446,8 @@ kbd{border:1px solid var(--line-soft);background:var(--raised);border-radius:5px
 .server-error{max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 .save-icon{width:36px;height:36px;border-radius:6px;image-rendering:pixelated;background:var(--raised);flex:none}
+
+.deps-panel{margin:8px 0;border:1px solid var(--line-soft);border-radius:10px;background:var(--panel);padding:8px 10px}
+.deps-head{display:flex;align-items:center;gap:8px;font-size:11px}
+.deps-head span{color:var(--faint);font-size:9px;flex:1}
+.deps-row{font-size:10px;color:var(--muted);padding:3px 0;border-top:1px dashed var(--line-soft);margin-top:4px}

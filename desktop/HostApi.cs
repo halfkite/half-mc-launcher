@@ -757,6 +757,12 @@ namespace HalfMcLauncher
                         }
                     }
 
+                case "mods.deps":
+                    {
+                        var request = payload as JObject ?? new JObject();
+                        return ModDeps.Check(FindInstance(request.Value<string>("id")));
+                    }
+
                 case "task.cancel": return new JValue(Form.Launch.CancelTask(payload?.ToString()));
                 case "logs.export": return new JValue(false);
 
