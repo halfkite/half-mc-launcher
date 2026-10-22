@@ -677,6 +677,27 @@ namespace HalfMcLauncher
                         }
                     }
 
+                case "servers.list":
+                    return Servers.List(FindInstance(payload is JObject listRequest ? listRequest.Value<string>("id") : payload?.ToString()));
+
+                case "servers.add":
+                    {
+                        var request = payload as JObject ?? new JObject();
+                        return Servers.Add(FindInstance(request.Value<string>("id")), request.Value<string>("name"), request.Value<string>("ip"));
+                    }
+
+                case "servers.remove":
+                    {
+                        var request = payload as JObject ?? new JObject();
+                        return Servers.Remove(FindInstance(request.Value<string>("id")), request.Value<int?>("index") ?? -1);
+                    }
+
+                case "servers.reveal":
+                    {
+                        Servers.Reveal(FindInstance(payload?.Value<string>("id")));
+                        return new JValue(true);
+                    }
+
                 case "task.cancel": return new JValue(Form.Launch.CancelTask(payload?.ToString()));
                 case "logs.export": return new JValue(false);
 

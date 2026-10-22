@@ -396,3 +396,14 @@ kbd{border:1px solid var(--line-soft);background:var(--raised);border-radius:5px
 .verify-row span{flex:none;color:var(--faint);background:var(--raised);border-radius:5px;padding:1px 5px;font-size:9px}
 .verify-row b{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .verify-row small{color:var(--faint);margin-left:auto;white-space:nowrap}
+
+.servers-page{padding-bottom:20px}
+.server-add{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 14px}
+.server-add input{flex:1;min-width:160px;background:var(--raised);border:1px solid var(--line-soft);border-radius:9px;padding:9px 11px;color:var(--text)}
+.server-add input:focus{background:var(--panel);border-color:var(--green);box-shadow:0 0 0 3px var(--green-bg);outline:none}
+.server-row{display:flex;align-items:center;gap:12px;padding:10px 8px;border-bottom:1px solid var(--line-soft);border-radius:8px}
+.server-row:hover{background:var(--hover)}
+.server-icon{width:36px;height:36px;border-radius:8px;flex:none;image-rendering:pixelated;background:var(--raised);display:grid;place-items:center;color:var(--muted)}
+.server-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.server-main b{font-size:12px}
+.server-main small{color:var(--faint);font-size:10px}
