@@ -122,6 +122,11 @@ namespace HalfMcLauncher
                     ["kind"] = "microsoft"
                 };
             }
+            catch (Exception error)
+            {
+                Diagnostics.Write("auth login " + method + " failed: " + error);
+                throw;
+            }
             finally
             {
                 pending = null;
@@ -283,6 +288,8 @@ namespace HalfMcLauncher
                 values.TryGetValue("code", out code);
                 values.TryGetValue("state", out state);
                 values.TryGetValue("error", out error);
+                Diagnostics.Write("auth callback state=" + string.Equals(state, expectedState, StringComparison.Ordinal)
+                    + " code=" + !string.IsNullOrEmpty(code) + " error=" + (error ?? "none"));
 
                 var body = string.IsNullOrEmpty(error)
                     ? "<!doctype html><meta charset=\"utf-8\"><title>授权完成</title><h1>授权已收到</h1><p>请返回 Half Mc Launcher，正在验证 Minecraft 账户。</p>"
