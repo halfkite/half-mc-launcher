@@ -64,7 +64,8 @@ namespace HalfMcLauncher
                 if (stream == null) return;
                 var directory = Path.GetDirectoryName(target);
                 if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
-                if (File.Exists(target) && new FileInfo(target).Length == stream.Length) return;
+                // 前端构建产物的文件名带哈希，index.html 的大小却几乎不变；按大小跳过
+                // 会让新版本一直加载旧页面，所以这里每次都覆盖写入。
                 using (var file = File.Create(target)) stream.CopyTo(file);
             }
         }
