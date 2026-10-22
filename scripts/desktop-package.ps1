@@ -1,5 +1,6 @@
 ﻿param(
-  [string]$Configuration = 'Release'
+  [string]$Configuration = 'Release',
+  [switch]$Launch
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
@@ -43,6 +44,12 @@ try {
   Write-Host ''
   Write-Host ("单文件 EXE：{0:N2} MB（{1}）" -f ((Get-Item $target).Length / 1MB), $version)
   Write-Host ("输出：{0}" -f $target)
+
+  if ($Launch) {
+    Write-Host '启动新版本…'
+    Set-Location (Split-Path $target)
+    & $target
+  }
 }
 finally {
   Pop-Location

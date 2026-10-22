@@ -23,6 +23,7 @@ namespace HalfMcLauncher
 
         private void OnBrowserReady(object sender, CoreWebView2InitializationCompletedEventArgs e)
         {
+            Diagnostics.Write("browser ready success=" + e.IsSuccess + " " + e.InitializationException?.Message);
             if (!e.IsSuccess)
             {
                 System.Windows.Forms.MessageBox.Show("WebView2 初始化失败：" + e.InitializationException?.Message, "Half 启动失败");

@@ -46,8 +46,9 @@ Half Mc Launcher.exe --check-downloads   # Modrinth 搜索 / 依赖 / 下载 / �
 ## 构建与打包
 
 ```text
-npm run desktop        # 编译并输出单文件 dist-desktop/Half-Mc-Launcher-0.1.0.exe
-npm run desktop:test   # 运行实例扫描 / 配置读写 / Java 检测 / 启动参数构建的冒烟测试
+npm run desktop         # 编译并输出单文件 dist-desktop/Half-Mc-Launcher-0.1.0-r6.exe
+npm run desktop:launch  # 同上，构建完成后直接启动新版本
+npm run desktop:test    # 运行实例扫描 / 配置读写 / Java 检测 / 启动参数构建的冒烟测试
 ```
 
 要求：Windows + .NET Framework 4.8（系统自带）+ WebView2 运行时；构建需要 .NET SDK 8 或更高，

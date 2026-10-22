@@ -30,7 +30,9 @@ namespace HalfMcLauncher
         [STAThread]
         private static int Main(string[] args)
         {
+            Diagnostics.Write("start pid=" + System.Diagnostics.Process.GetCurrentProcess().Id + " args=" + string.Join(" ", args ?? Array.Empty<string>()));
             AppPaths.Initialize();
+            Diagnostics.Write("paths ready data=" + AppPaths.DataDir);
 
             if (args != null && args.Any(item => string.Equals(item, "--selftest", StringComparison.OrdinalIgnoreCase)))
                 return SelfTest();
@@ -42,6 +44,7 @@ namespace HalfMcLauncher
             Bootstrap.EnableDpiAwareness();
             Bootstrap.ExtractNativeLoader();
             Bootstrap.ExtractWebAssets();
+            Diagnostics.Write("bootstrap ready");
 
             // 任何未处理异常都写日志并提示，而不是让窗口直接消失。
             Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
@@ -50,8 +53,11 @@ namespace HalfMcLauncher
 
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+            Diagnostics.Write("creating form");
             MainWindow = new MainForm();
+            Diagnostics.Write("form created, running");
             Application.Run(MainWindow);
+            Diagnostics.Write("application exited");
             return 0;
         }
 

@@ -36,10 +36,11 @@ namespace HalfMcLauncher
             StartPosition = FormStartPosition.CenterScreen;
             DoubleBuffered = true;
 
-            Shown += async (sender, args) => await InitializeBrowserAsync();
+            Shown += async (sender, args) => { Diagnostics.Write("form shown"); await InitializeBrowserAsync(); };
             ApplyRememberedBounds();
             FormClosing += OnClosing;
             launch.Log("Half Mc Launcher " + Program.Version + " 已就绪");
+            Diagnostics.Write("form constructed");
         }
 
         internal ConfigStore Store { get { return store; } }
@@ -151,6 +152,7 @@ namespace HalfMcLauncher
 
         private void OnClosing(object sender, FormClosingEventArgs e)
         {
+            Diagnostics.Write("closing requested, closing=" + closing);
             if (closing) return;
             e.Cancel = true;
             SendEvent("closeRequested", null);
