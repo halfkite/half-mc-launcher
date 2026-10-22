@@ -44,6 +44,14 @@ try {
   try { Unblock-File -LiteralPath $target -ErrorAction Stop } catch { }
   Remove-Item -LiteralPath ($target + ':Zone.Identifier') -ErrorAction SilentlyContinue
 
+  # 未签名的 exe 从资源管理器直接双击时，Windows 可能弹出“未知发布者”提示。
+  # 附带一个批处理入口，通过 CreateProcess 启动，可绕开该提示。
+  $launcher = Join-Path (Split-Path $target) 'Start Launcher.cmd'
+  $exeName = Split-Path $target -Leaf
+  $launchLine = 'start "" "%~dp0{0}"' -f $exeName
+  Set-Content -LiteralPath $launcher -Encoding ASCII -Value @('@echo off', $launchLine)
+  try { Unblock-File -LiteralPath $launcher -ErrorAction Stop } catch { }
+
   Write-Host ''
   Write-Host ("单文件 EXE：{0:N2} MB（{1}）" -f ((Get-Item $target).Length / 1MB), $version)
   Write-Host ("输出：{0}" -f $target)
