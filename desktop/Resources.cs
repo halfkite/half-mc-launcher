@@ -335,25 +335,34 @@ namespace HalfMcLauncher
             var added = new List<string>();
             try
             {
-                for (var index = 0; index < plan.Count; index++)
+                var threads = Math.Max(1, Math.Min(8, DownloadSettings.Threads));
+                var bag = new System.Collections.Concurrent.ConcurrentBag<(string Temp, string Target, Version Version)>();
+                using (var semaphore = new SemaphoreSlim(threads))
                 {
-                    ct.ThrowIfCancellationRequested();
-                    var version = plan[index];
-                    var folder = version.Kind == "mod" ? "mods" : version.Kind == "shader" ? "shaderpacks" : "resourcepacks";
-                    var directory = Mods.ResourceDirectory(instance, folder);
-                    var target = Path.Combine(directory, version.Filename);
-                    if (File.Exists(target))
+                    var tasks = plan.Select(async (version, index) =>
                     {
-                        if (string.Equals(HashFile(target, version.Algorithm), version.Hash, StringComparison.OrdinalIgnoreCase)) continue;
-                        throw new InvalidOperationException("已存在不同的同名文件：" + version.Filename + "。请先在 Mod 管理中处理");
-                    }
-                    if (File.Exists(target + ".disabled")) throw new InvalidOperationException("此模组已被禁用：" + version.Filename);
+                        ct.ThrowIfCancellationRequested();
+                        var folder = version.Kind == "mod" ? "mods" : version.Kind == "shader" ? "shaderpacks" : "resourcepacks";
+                        var directory = Mods.ResourceDirectory(instance, folder);
+                        var target = Path.Combine(directory, version.Filename);
+                        if (File.Exists(target))
+                        {
+                            if (string.Equals(HashFile(target, version.Algorithm), version.Hash, StringComparison.OrdinalIgnoreCase)) return;
+                            throw new InvalidOperationException("已存在不同的同名文件：" + version.Filename + "。请先在 Mod 管理中处理");
+                        }
+                        if (File.Exists(target + ".disabled")) throw new InvalidOperationException("此模组已被禁用：" + version.Filename);
 
-                    var temp = Path.Combine(directory, ".half-" + Guid.NewGuid().ToString("N") + ".part");
-                    staging.Add((temp, target, version));
-                    progress?.Invoke("下载 " + version.Filename + "（" + (index + 1) + "/" + plan.Count + "）");
-                    await DownloadAsync(version, temp, ct);
+                        var temp = Path.Combine(directory, ".half-" + Guid.NewGuid().ToString("N") + ".part");
+                        bag.Add((temp, target, version));
+                        progress?.Invoke("下载 " + version.Filename + "（" + (index + 1) + "/" + plan.Count + "）");
+                        await semaphore.WaitAsync(ct);
+                        try { await DownloadAsync(version, temp, ct); }
+                        catch { try { if (File.Exists(temp)) File.Delete(temp); } catch { } throw; }
+                        finally { semaphore.Release(); }
+                    }).ToList();
+                    await Task.WhenAll(tasks);
                 }
+                staging.AddRange(bag);
 
                 var conflicts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var file in Directory.EnumerateFiles(Path.Combine(instance.Value<string>("gameDir"), "mods"), "*.jar"))
@@ -391,6 +400,28 @@ namespace HalfMcLauncher
         }
 
         private async Task DownloadAsync(Version version, string target, CancellationToken ct)
+        {
+            var attempts = DownloadSettings.Retries + 1;
+            for (var attempt = 1; ; attempt++)
+            {
+                try
+                {
+                    using (var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct))
+                    {
+                        timeout.CancelAfter(TimeSpan.FromSeconds(DownloadSettings.TimeoutSeconds));
+                        await DownloadOnceAsync(version, target, timeout.Token);
+                    }
+                    return;
+                }
+                catch (Exception) when (attempt < attempts && !ct.IsCancellationRequested)
+                {
+                    try { if (File.Exists(target)) File.Delete(target); } catch { }
+                    await Task.Delay(250 * attempt, ct);
+                }
+            }
+        }
+
+        private async Task DownloadOnceAsync(Version version, string target, CancellationToken ct)
         {
             using (var request = new HttpRequestMessage(HttpMethod.Get, version.Url))
             using (var response = await Http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct))
