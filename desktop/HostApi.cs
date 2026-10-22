@@ -678,7 +678,7 @@ namespace HalfMcLauncher
                     }
 
                 case "servers.list":
-                    return Servers.List(FindInstance(payload is JObject listRequest ? listRequest.Value<string>("id") : payload?.ToString()));
+                    return Servers.List(FindInstance(payload is JObject lookupRequest ? lookupRequest.Value<string>("id") : payload?.ToString()));
 
                 case "servers.add":
                     {
@@ -708,6 +708,34 @@ namespace HalfMcLauncher
                     {
                         var request = payload as JObject ?? new JObject();
                         return Content.Image(FindInstance(request.Value<string>("id")), request.Value<string>("file"));
+                    }
+
+                case "servers.ping":
+                    {
+                        var request = payload as JObject ?? new JObject();
+                        return await ServerPing.PingAsync(request.Value<string>("address"), CancellationToken.None);
+                    }
+
+                case "servers.pingList":
+                    {
+                        var instance = FindInstance(payload is JObject pingRequest ? pingRequest.Value<string>("id") : payload?.ToString());
+                        var rows = Servers.List(instance).Take(30).ToList();
+                        var tasks = rows.Select(async row =>
+                        {
+                            var ip = row.Value<string>("ip") ?? string.Empty;
+                            try
+                            {
+                                var result = await ServerPing.PingAsync(ip, CancellationToken.None);
+                                result["name"] = row.Value<string>("name");
+                                result["ip"] = ip;
+                                return result;
+                            }
+                            catch (Exception error)
+                            {
+                                return new JObject { ["online"] = false, ["name"] = row.Value<string>("name"), ["ip"] = ip, ["error"] = error.Message };
+                            }
+                        }).ToArray();
+                        return new JArray(await Task.WhenAll(tasks));
                     }
 
                 case "task.cancel": return new JValue(Form.Launch.CancelTask(payload?.ToString()));

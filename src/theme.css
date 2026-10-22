@@ -435,3 +435,12 @@ kbd{border:1px solid var(--line-soft);background:var(--raised);border-radius:5px
 .shot-viewer{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:10px;margin-bottom:14px}
 .shot-viewer-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;font-size:11px}
 .shot-viewer img{width:100%;border-radius:8px;display:block}
+
+.server-status{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:3px;font-size:9px;color:var(--muted)}
+.server-status.offline{color:var(--faint)}
+.server-status b{font-weight:600;color:var(--text)}
+.server-status .status-dot{width:5px;height:5px}
+.server-status.offline .status-dot{background:var(--red)}
+.server-motd{color:var(--faint);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.server-error{max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
