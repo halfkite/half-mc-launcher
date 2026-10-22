@@ -156,3 +156,10 @@ html.reduce-motion body::before{animation:none}
 .sidebar-bottom{padding:10px 6px 14px;border-top:1px solid var(--line-soft);margin-top:auto;display:flex;flex-direction:column;gap:6px}
 
 .layout-picker .layout-dropdown button{width:100%;margin-left:0;padding:8px 10px;opacity:1;visibility:visible;pointer-events:auto;border-width:1px}
+
+.sidebar.collapsed .account-strip{justify-content:center;padding:0;gap:0}
+.sidebar.collapsed .account-add{display:none}
+.sidebar.collapsed .side-account-list{left:calc(100% + 10px);right:auto;bottom:0;width:190px}
+.side-account-list{background:var(--panel);border-radius:10px;padding:6px;box-shadow:var(--depth-2)}
+.side-account-list button{min-height:34px}
+.side-account-list .account-avatar{border-radius:6px}
