@@ -35,6 +35,7 @@ namespace HalfMcLauncher
             launch = new LaunchService(store, (type, data) => SendEvent(type, data), () => BuildSnapshot());
 
             Text = "Half Mc Launcher";
+            try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
             FormBorderStyle = FormBorderStyle.None;
             var dark = string.Equals(store.Settings.Value<string>("theme"), "dark", StringComparison.OrdinalIgnoreCase);
             BackColor = dark ? Color.FromArgb(14, 17, 16) : Color.FromArgb(246, 248, 246);
