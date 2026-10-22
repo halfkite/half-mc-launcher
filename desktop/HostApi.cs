@@ -171,6 +171,39 @@ namespace HalfMcLauncher
                         return account;
                     }
 
+                case "account.login":
+                    {
+                        var loginMethod = string.Equals(payload?.ToString(), "device", StringComparison.OrdinalIgnoreCase) ? "device" : "browser";
+                        var account = await MicrosoftAuth.LoginAsync(loginMethod, (type, body) => Form.SendEvent(type, body));
+                        var accounts = Store.State["accounts"] as JArray ?? new JArray();
+                        var uuid = account.Value<string>("uuid");
+                        var cleaned = new JArray(accounts.Where(item => string.Equals(item.Value<string>("uuid"), uuid, StringComparison.OrdinalIgnoreCase)));
+                        cleaned.Add(account);
+                        Store.State["accounts"] = cleaned;
+                        Store.State["selectedAccount"] = account["id"];
+                        Store.Save();
+                        Form.SendEvent("snapshot", Form.BuildSnapshot());
+                        return account;
+                    }
+
+                case "account.cancel":
+                    MicrosoftAuth.Cancel();
+                    return new JValue(true);
+
+                case "account.reopen":
+                    {
+                        if (string.IsNullOrEmpty(MicrosoftAuth.LastUrl)) throw new InvalidOperationException("当前没有等待授权的登录");
+                        Process.Start(new ProcessStartInfo(MicrosoftAuth.LastUrl) { UseShellExecute = true });
+                        return new JValue(true);
+                    }
+
+                case "account.copyCode":
+                    {
+                        if (string.IsNullOrEmpty(MicrosoftAuth.LastCode)) throw new InvalidOperationException("当前没有设备代码");
+                        Clipboard.SetText(MicrosoftAuth.LastCode);
+                        return new JValue(true);
+                    }
+
                 case "account.select":
                     {
                         var id = payload?.ToString();
@@ -188,6 +221,7 @@ namespace HalfMcLauncher
                         var accounts = Store.State["accounts"] as JArray ?? new JArray();
                         var target = accounts.FirstOrDefault(item => item.Value<string>("id") == id);
                         if (target != null) accounts.Remove(target);
+                        MicrosoftAuth.Remove(id);
                         Store.State["accounts"] = accounts;
                         if (Store.State.Value<string>("selectedAccount") == id)
                             Store.State["selectedAccount"] = accounts.FirstOrDefault()?.Value<string>("id") ?? string.Empty;
@@ -197,6 +231,7 @@ namespace HalfMcLauncher
                     }
 
                 case "account.reset":
+                    MicrosoftAuth.Reset();
                     Store.State["accounts"] = new JArray();
                     Store.State["selectedAccount"] = string.Empty;
                     Store.Save();

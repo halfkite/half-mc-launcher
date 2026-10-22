@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
@@ -40,6 +41,8 @@ namespace HalfMcLauncher
                 return CheckVersions();
             if (args != null && args.Any(item => string.Equals(item, "--check-downloads", StringComparison.OrdinalIgnoreCase)))
                 return CheckDownloads();
+            if (args != null && args.Any(item => string.Equals(item, "--check-auth", StringComparison.OrdinalIgnoreCase)))
+                return CheckAuth();
 
             Bootstrap.EnableDpiAwareness();
             Bootstrap.ExtractNativeLoader();
@@ -169,6 +172,44 @@ namespace HalfMcLauncher
             catch (Exception error) { ok = false; lines.Add("mod-error=" + error.Message); }
 
             File.WriteAllLines(Path.Combine(AppPaths.DataDir, "download-check.txt"), lines);
+            return ok ? 0 : 1;
+        }
+
+        /// <summary>登录自检：确认内置客户端 ID 能申请到设备代码（不完成授权）。</summary>
+        private static int CheckAuth()
+        {
+            var lines = new List<string>();
+            var ok = true;
+            try
+            {
+                var clientId = MicrosoftAuth.ClientId();
+                lines.Add("clientId=" + clientId);
+                using (var http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) })
+                using (var form = new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                    ["client_id"] = clientId,
+                    ["scope"] = "XboxLive.signin offline_access"
+                }))
+                using (var response = http.PostAsync("https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode", form).GetAwaiter().GetResult())
+                {
+                    var text = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                    lines.Add("status=" + (int)response.StatusCode);
+                    var body = JObject.Parse(string.IsNullOrWhiteSpace(text) ? "{}" : text);
+                    if (response.IsSuccessStatusCode)
+                    {
+                        lines.Add("user_code=" + body.Value<string>("user_code"));
+                        lines.Add("verification_uri=" + body.Value<string>("verification_uri"));
+                        if (string.IsNullOrEmpty(body.Value<string>("user_code"))) ok = false;
+                    }
+                    else
+                    {
+                        lines.Add("error=" + (body.Value<string>("error") ?? text));
+                        ok = false;
+                    }
+                }
+            }
+            catch (Exception error) { ok = false; lines.Add("error=" + error.Message); }
+            File.WriteAllLines(Path.Combine(AppPaths.DataDir, "auth-check.txt"), lines);
             return ok ? 0 : 1;
         }
 

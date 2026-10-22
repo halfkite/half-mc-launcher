@@ -23,6 +23,7 @@
 - `data/config.json` 与 Electron 版完全兼容：保留未知字段，原子写入，损坏时备份
 - 实例扫描：`versions` 根识别、`instanceId`（sha256 前 24 位）、加载器识别、损坏版本提示、隐藏实例、独立游戏目录判定
 - 设置/外观/工作区/预设保存、目录登记与移除、离线账户（标准 OfflinePlayer UUID）、打开目录与网页
+- **微软登录**：默认浏览器回环授权（PKCE）与设备代码两种方式；令牌经 DPAPI 加密存放在 `data/accounts.bin`，启动时自动续期
 - **Java 检测**：PATH、`JAVA_HOME`、常见安装目录与用户搜索目录，`-XshowSettings:properties` 读取版本/架构
 - **启动游戏**：CmlLib.Core 构建启动参数（离线会话、内存、Java、natives），进程输出接入日志与任务中心，支持结束进程
 - **下载页**：Mojang 版本清单、原版安装、任务进度与取消；游戏版本选定后折叠为一行，下载页默认先显示 Mod
@@ -34,7 +35,7 @@
 - 未处理异常写入 `data/logs/crash.log` 并提示，窗口不再直接消失
 - 默认主题为浅色 + 淡蓝（`#74b5ff`）
 
-尚未接入：LiteLoader 安装、微软登录、实例删除/复制、插件系统。
+尚未接入：LiteLoader 安装、实例删除/复制、插件系统。
 
 无界面自检命令（结果写在 `data/` 下）：
 

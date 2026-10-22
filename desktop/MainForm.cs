@@ -65,9 +65,9 @@ namespace HalfMcLauncher
                 ["appVersion"] = Program.Version,
                 ["memoryMb"] = SystemMemory.TotalMegabytes(),
                 ["scanWarnings"] = new JArray(scan.Warnings),
-                ["authConfigured"] = false,
-                ["authClientId"] = "",
-                ["authSource"] = "none"
+                ["authConfigured"] = true,
+                ["authClientId"] = MicrosoftAuth.ClientId(),
+                ["authSource"] = MicrosoftAuth.ClientIdSource()
             };
         }
 

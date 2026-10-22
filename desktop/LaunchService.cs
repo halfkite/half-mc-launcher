@@ -81,8 +81,6 @@ namespace HalfMcLauncher
             var settings = store.Settings;
             var account = SelectedAccount();
             if (account == null) throw new InvalidOperationException("请先添加账户（微软账户或离线账户）");
-            if (account.Value<string>("kind") != "offline")
-                throw new NotSupportedException("微软账户登录将在下一阶段接入，请先使用离线账户启动");
 
             var root = instance.Value<string>("root");
             var version = instance.Value<string>("version");
@@ -107,9 +105,15 @@ namespace HalfMcLauncher
                 // 只用本地版本描述，避免启动时联网取版本清单，也避免写入游戏目录。
                 parameters.VersionLoader = new CmlLib.Core.VersionLoader.LocalJsonVersionLoader(path);
                 var launcher = new MinecraftLauncher(parameters);
+                var accessToken = "0";
+                if (account.Value<string>("kind") != "offline")
+                {
+                    UpdateTask(task, "running", 20, "验证微软账户");
+                    accessToken = await MicrosoftAuth.SessionAsync(account.Value<string>("id"), CancellationToken.None);
+                }
                 var option = new MLaunchOption
                 {
-                    Session = new MSession(account.Value<string>("name"), "0", account.Value<string>("uuid")),
+                    Session = new MSession(account.Value<string>("name"), accessToken, account.Value<string>("uuid")),
                     JavaPath = java,
                     MaximumRamMb = memory,
                     MinimumRamMb = Math.Min(512, memory),
