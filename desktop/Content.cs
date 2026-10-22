@@ -111,7 +111,11 @@ namespace HalfMcLauncher
                 : target + ".disabled";
             if (File.Exists(next)) { File.SetAttributes(next, FileAttributes.Normal); File.Delete(next); }
             if ((File.GetAttributes(target) & FileAttributes.ReadOnly) != 0) File.SetAttributes(target, FileAttributes.Normal);
-            try { File.Move(target, next); }`n            catch (Exception error) when (error is UnauthorizedAccessException || error is IOException)`n            {`n                throw new InvalidOperationException("无法修改文件，请确认目录可写：" + target, error);`n            }
+            try { File.Move(target, next); }
+            catch (Exception error) when (error is UnauthorizedAccessException || error is IOException)
+            {
+                throw new InvalidOperationException("无法修改文件，请确认目录可写：" + target, error);
+            }
             return List(instance, kind);
         }
 
