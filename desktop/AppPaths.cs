@@ -25,9 +25,19 @@ namespace HalfMcLauncher
                 ? Path.Combine(BaseDir, "data")
                 : Path.GetFullPath(overrideDir);
 
+            try
+            {
+                Directory.CreateDirectory(DataDir);
+            }
+            catch (Exception error) when (error is UnauthorizedAccessException || error is IOException)
+            {
+                // 放在 Program Files、网络盘或只读位置时退回用户目录，避免直接无法启动。
+                DataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HalfMcLauncher", "data");
+                Directory.CreateDirectory(DataDir);
+            }
+
             WebRoot = Path.Combine(DataDir, "web");
 
-            Directory.CreateDirectory(DataDir);
             Directory.CreateDirectory(LogDir);
             Directory.CreateDirectory(Path.Combine(DataDir, "webview2"));
         }

@@ -32,7 +32,15 @@ namespace HalfMcLauncher
         private static int Main(string[] args)
         {
             Diagnostics.Write("start pid=" + System.Diagnostics.Process.GetCurrentProcess().Id + " args=" + string.Join(" ", args ?? Array.Empty<string>()));
-            AppPaths.Initialize();
+            try
+            {
+                AppPaths.Initialize();
+            }
+            catch (Exception error)
+            {
+                MessageBox.Show("无法创建数据目录：\n" + error.Message + "\n\n请把程序放到有写入权限的文件夹（例如桌面）后重试。", "Half 无法启动");
+                return 1;
+            }
             Diagnostics.Write("paths ready data=" + AppPaths.DataDir);
             try
             {
@@ -53,7 +61,24 @@ namespace HalfMcLauncher
             Bootstrap.EnableDpiAwareness();
             Bootstrap.ExtractNativeLoader();
             Bootstrap.ExtractWebAssets();
+            WriteEnvironmentReport();
             Diagnostics.Write("bootstrap ready");
+
+            try
+            {
+                var runtime = Microsoft.Web.WebView2.Core.CoreWebView2Environment.GetAvailableBrowserVersionString();
+                Diagnostics.Write("webview2 runtime=" + runtime);
+            }
+            catch (Exception error)
+            {
+                MessageBox.Show(
+                    "没有找到 Microsoft Edge WebView2 运行时，启动器需要它来显示界面。\n\n" +
+                    "Windows 11 和较新的 Windows 10 通常已经自带；如果缺失，请安装：\n" +
+                    "https://go.microsoft.com/fwlink/p/?LinkId=2124703\n\n" +
+                    "详细信息：" + error.Message,
+                    "Half 缺少 WebView2 运行时");
+                return 2;
+            }
 
             // 任何未处理异常都写日志并提示，而不是让窗口直接消失。
             Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
@@ -179,6 +204,55 @@ namespace HalfMcLauncher
 
             File.WriteAllLines(Path.Combine(AppPaths.DataDir, "download-check.txt"), lines);
             return ok ? 0 : 1;
+        }
+
+        /// <summary>把系统、运行时、路径和 WebView2 状态写到 data/diagnose.txt，便于排查“别人打不开”。</summary>
+        private static void WriteEnvironmentReport()
+        {
+            try
+            {
+                var lines = new List<string>();
+                lines.Add("Half Mc Launcher " + Version);
+                lines.Add("os=" + Environment.OSVersion.VersionString + " build=" + Environment.OSVersion.Version.Build);
+                try
+                {
+                    using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion"))
+                    {
+                        if (key != null)
+                            lines.Add("windows=" + key.GetValue("ProductName") + " build=" + key.GetValue("CurrentBuildNumber") + "." + key.GetValue("UBR"));
+                    }
+                }
+                catch { }
+                lines.Add("64bitOS=" + Environment.Is64BitOperatingSystem + " 64bitProcess=" + Environment.Is64BitProcess);
+                lines.Add("clr=" + Environment.Version);
+                lines.Add("baseDir=" + AppPaths.BaseDir);
+                lines.Add("dataDir=" + AppPaths.DataDir);
+                var exe = Path.Combine(AppPaths.BaseDir, "Half-Mc-Launcher-" + Version + ".exe");
+                lines.Add("exeExists=" + File.Exists(exe));
+                lines.Add("motw=" + (File.Exists(exe + ":Zone.Identifier") ? "blocked-by-windows" : "none"));
+                try { lines.Add("webview2=" + Microsoft.Web.WebView2.Core.CoreWebView2Environment.GetAvailableBrowserVersionString()); }
+                catch (Exception error) { lines.Add("webview2=MISSING " + error.Message); }
+                try
+                {
+                    using (var identity = System.Security.Principal.WindowsIdentity.GetCurrent())
+                        lines.Add("elevated=" + new System.Security.Principal.WindowsPrincipal(identity).IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator));
+                }
+                catch { }
+                lines.Add("dataWritable=" + CanWrite(Path.Combine(AppPaths.DataDir, ".write-test")));
+                File.WriteAllLines(Path.Combine(AppPaths.DataDir, "diagnose.txt"), lines);
+            }
+            catch { }
+        }
+
+        private static bool CanWrite(string path)
+        {
+            try
+            {
+                File.WriteAllText(path, "ok");
+                File.Delete(path);
+                return true;
+            }
+            catch { return false; }
         }
 
         /// <summary>登录自检：确认内置客户端 ID 能申请到设备代码（不完成授权）。</summary>
