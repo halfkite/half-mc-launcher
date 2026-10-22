@@ -58,7 +58,7 @@ namespace HalfMcLauncher
                     }
                 case "forge":
                     {
-                        var launcher = new MinecraftLauncher(MinecraftLauncherParameters.CreateDefault(new MinecraftPath()));
+                        var launcher = Network.Create(new MinecraftPath());
                         var installer = new ForgeInstaller(launcher, Http);
                         var versions = await installer.GetForgeVersions(minecraft);
                         foreach (var version in versions)
@@ -70,7 +70,7 @@ namespace HalfMcLauncher
                     }
                 case "neoforge":
                     {
-                        var launcher = new MinecraftLauncher(MinecraftLauncherParameters.CreateDefault(new MinecraftPath()));
+                        var launcher = Network.Create(new MinecraftPath());
                         var installer = new NeoForgeInstaller(launcher, Http);
                         var versions = await installer.GetNeoForgeVersions(minecraft);
                         foreach (var version in versions)
@@ -147,7 +147,7 @@ namespace HalfMcLauncher
                 case "forge":
                     {
                         progress?.Invoke("安装 Forge " + loaderVersion + "（需要 Java 运行安装器）");
-                        var launcher = new MinecraftLauncher(MinecraftLauncherParameters.CreateDefault(path));
+                        var launcher = Network.Create(path);
                         var installer = new ForgeInstaller(launcher, Http);
                         var options = new ForgeInstallOptions { JavaPath = javaPath, CancellationToken = ct, SkipIfAlreadyInstalled = true };
                         return await installer.Install(minecraft, loaderVersion, options);
@@ -155,7 +155,7 @@ namespace HalfMcLauncher
                 case "neoforge":
                     {
                         progress?.Invoke("安装 NeoForge " + loaderVersion + "（需要 Java 运行安装器）");
-                        var launcher = new MinecraftLauncher(MinecraftLauncherParameters.CreateDefault(path));
+                        var launcher = Network.Create(path);
                         var installer = new NeoForgeInstaller(launcher, Http);
                         var options = new ForgeInstallOptions { JavaPath = javaPath, CancellationToken = ct, SkipIfAlreadyInstalled = true };
                         return await installer.Install(minecraft, loaderVersion, options);

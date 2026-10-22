@@ -101,7 +101,7 @@ namespace HalfMcLauncher
                 UpdateTask(task, "running", 15, "解析版本并构建启动参数");
                 var path = new MinecraftPath(root);
                 path.CreateDirs();
-                var parameters = MinecraftLauncherParameters.CreateDefault(path);
+                var parameters = Network.Parameters(path);
                 // 只用本地版本描述，避免启动时联网取版本清单，也避免写入游戏目录。
                 parameters.VersionLoader = new CmlLib.Core.VersionLoader.LocalJsonVersionLoader(path);
                 var launcher = new MinecraftLauncher(parameters);
@@ -327,7 +327,7 @@ namespace HalfMcLauncher
                 progress("下载原版 " + version);
                 var path = new MinecraftPath(root);
                 path.CreateDirs();
-                var launcher = new MinecraftLauncher(MinecraftLauncherParameters.CreateDefault(path));
+                var launcher = Network.Create(path);
                 await launcher.InstallAsync(version, ct);
                 if (!string.IsNullOrEmpty(loader) && loader != "vanilla")
                     await Loaders.InstallAsync(version, loader, loaderVersion, root, javaPath, ct, progress);

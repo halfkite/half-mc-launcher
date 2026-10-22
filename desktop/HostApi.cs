@@ -738,6 +738,25 @@ namespace HalfMcLauncher
                         return new JArray(await Task.WhenAll(tasks));
                     }
 
+                case "download.test":
+                    {
+                        var watch = System.Diagnostics.Stopwatch.StartNew();
+                        using (var client = Network.CreateClient())
+                        using (var response = await client.GetAsync(Network.OfficialManifest, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None))
+                        {
+                            watch.Stop();
+                            return new JObject
+                            {
+                                ["source"] = DownloadSettings.Source,
+                                ["ok"] = response.IsSuccessStatusCode,
+                                ["status"] = (int)response.StatusCode,
+                                ["ms"] = watch.ElapsedMilliseconds,
+                                ["bytes"] = response.Content.Headers.ContentLength ?? 0,
+                                ["url"] = response.RequestMessage?.RequestUri?.ToString() ?? string.Empty
+                            };
+                        }
+                    }
+
                 case "task.cancel": return new JValue(Form.Launch.CancelTask(payload?.ToString()));
                 case "logs.export": return new JValue(false);
 
@@ -762,7 +781,7 @@ namespace HalfMcLauncher
         private static async Task<JToken> VersionsAsync()
         {
             if (versionCache != null) return versionCache;
-            var text = await Http.GetStringAsync("https://piston-meta.mojang.com/mc/game/version_manifest_v2.json");
+            var text = await Http.GetStringAsync(Network.ManifestUrl);
             var root = JObject.Parse(text);
             var list = new JArray();
             foreach (var version in root["versions"] as JArray ?? new JArray())

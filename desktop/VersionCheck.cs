@@ -144,7 +144,7 @@ namespace HalfMcLauncher
             progress?.Invoke("重新安装 " + baseId + " 的文件");
             var path = new MinecraftPath(root);
             path.CreateDirs();
-            var launcher = new MinecraftLauncher(MinecraftLauncherParameters.CreateDefault(path));
+            var launcher = Network.Create(path);
             await launcher.InstallAsync(baseId, ct);
             progress?.Invoke("校验修复结果");
             return Verify(instance);
