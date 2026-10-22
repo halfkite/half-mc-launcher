@@ -763,6 +763,20 @@ namespace HalfMcLauncher
                         return ModDeps.Check(FindInstance(request.Value<string>("id")));
                     }
 
+                case "mods.translationPreview":
+                    {
+                        var request = payload as JObject ?? new JObject();
+                        return ModTranslation.Preview(FindInstance(request.Value<string>("id")));
+                    }
+
+                case "mods.translate":
+                    {
+                        var request = payload as JObject ?? new JObject();
+                        var instance = FindInstance(request.Value<string>("id"));
+                        return await ModTranslation.Translate(instance, request.Value<int?>("limit") ?? 200, (done, total) =>
+                            Form.SendEvent("translationProgress", new JObject { ["done"] = done, ["total"] = total }), CancellationToken.None);
+                    }
+
                 case "task.cancel": return new JValue(Form.Launch.CancelTask(payload?.ToString()));
                 case "logs.export": return new JValue(false);
 
