@@ -128,3 +128,31 @@ html.reduce-motion body::before{animation:none}
 .top-nav.compact>button::after{content:attr(data-name);position:absolute;top:calc(100% + 9px);left:50%;transform:translateX(-50%) translateY(-3px);padding:4px 9px;border-radius:7px;background:var(--raised);border:1px solid var(--line);box-shadow:var(--depth-1);color:var(--text);font-size:calc(10px * var(--font-scale,1));white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .12s,transform .12s;z-index:40}
 .top-nav.compact{overflow:visible}
 .top-nav.compact>button:hover::after{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* 搜索页与 Mod 标签页 */
+.search-page{max-width:860px;margin:0 auto;padding:28px 25px 40px}
+.search-box{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--raised)}
+.search-box input{flex:1;border:0;background:transparent;font-size:calc(14px * var(--font-scale,1));color:var(--text);outline:none}
+.search-box kbd{font-size:calc(9px * var(--font-scale,1));color:var(--faint);border:1px solid var(--line);border-radius:5px;padding:2px 6px}
+.search-tip{color:var(--faint);font-size:calc(9px * var(--font-scale,1));margin:10px 2px 22px}
+.search-group{margin-bottom:20px}
+.search-label{font-size:calc(9px * var(--font-scale,1));color:var(--faint);margin:0 2px 8px}
+.search-result{display:flex;align-items:center;gap:12px;width:100%;padding:11px 12px;border-radius:9px;border:1px solid transparent;text-align:left;color:var(--text)}
+.search-result:hover{background:var(--hover)}
+.search-result>span:not(.search-go){display:flex;flex-direction:column;gap:2px;min-width:0}
+.search-result b{font-size:calc(11px * var(--font-scale,1));font-weight:500}
+.search-result small{color:var(--faint);font-size:calc(9px * var(--font-scale,1))}
+.search-go{margin-left:auto;color:var(--green);font-size:calc(9px * var(--font-scale,1))}
+.search-empty{color:var(--faint);padding:24px 2px}
+.mods-page{height:100%;display:flex;flex-direction:column;min-height:0}
+.mods-embedded{flex:1;min-height:0;display:flex;flex-direction:column}
+.mods-embedded>.modal{position:static;width:100%;max-width:none;height:100%;max-height:none;margin:0;border-radius:0;border:0;box-shadow:none;background:transparent}
+.mods-embedded .modal-body{flex:1;min-height:0;overflow:auto}
+.layout-picker{position:relative}
+.layout-dropdown{top:calc(100% + 6px);right:0;width:190px;min-width:190px}
+.layout-dropdown button{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border-radius:7px;text-align:left}
+.layout-dropdown button span{flex:1}
+.account-avatars{flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:6px;padding:6px 4px 12px}
+.sidebar-bottom{padding:10px 6px 14px;border-top:1px solid var(--line-soft);margin-top:auto;display:flex;flex-direction:column;gap:6px}
+
+.layout-picker .layout-dropdown button{width:100%;margin-left:0;padding:8px 10px;opacity:1;visibility:visible;pointer-events:auto;border-width:1px}
