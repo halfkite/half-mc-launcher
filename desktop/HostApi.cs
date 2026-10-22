@@ -777,6 +777,26 @@ namespace HalfMcLauncher
                             Form.SendEvent("translationProgress", new JObject { ["done"] = done, ["total"] = total }), CancellationToken.None);
                     }
 
+                case "diagnostics.export":
+                    {
+                        using (var dialog = new SaveFileDialog
+                        {
+                            Filter = "诊断包|*.zip",
+                            FileName = "Half-诊断-" + DateTime.Now.ToString("yyyyMMdd-HHmm") + ".zip",
+                            InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory)
+                        })
+                        {
+                            if (dialog.ShowDialog(Form) != DialogResult.OK) return JValue.CreateNull();
+                            return DiagnosticsExport.Export(dialog.FileName);
+                        }
+                    }
+
+                case "diagnostics.exportPath":
+                    {
+                        var request = payload as JObject ?? new JObject();
+                        return DiagnosticsExport.Export(request.Value<string>("path"));
+                    }
+
                 case "task.cancel": return new JValue(Form.Launch.CancelTask(payload?.ToString()));
                 case "logs.export": return new JValue(false);
 
