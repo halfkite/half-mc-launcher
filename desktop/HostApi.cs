@@ -204,6 +204,13 @@ namespace HalfMcLauncher
                         return new JValue(true);
                     }
 
+                case "account.copyLink":
+                    {
+                        if (string.IsNullOrEmpty(MicrosoftAuth.LastUrl)) throw new InvalidOperationException("当前没有等待授权的登录");
+                        Clipboard.SetText(MicrosoftAuth.LastUrl);
+                        return new JValue(true);
+                    }
+
                 case "account.select":
                     {
                         var id = payload?.ToString();

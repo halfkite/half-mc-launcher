@@ -31,6 +31,19 @@
 .top-nav button:hover{background:var(--hover);color:var(--text)}
 .top-nav button.active{background:var(--raised);color:var(--green)}
 .top-nav.compact button{padding:0 8px}
+.top-nav-search{margin-left:2px}
+.top-nav-search kbd{font-size:calc(8px * var(--font-scale,1));color:var(--faint);border:1px solid var(--line);border-radius:4px;padding:1px 4px}
+.nav-switch{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;height:28px;flex:none;-webkit-app-region:no-drag}
+.nav-switch button{width:32px;display:grid;place-items:center;color:var(--faint);background:transparent}
+.nav-switch button:hover{background:var(--hover);color:var(--muted)}
+.nav-switch button.active{background:var(--green-bg);color:var(--green)}
+.nav-switch i{position:relative;display:block;width:14px;height:12px;border:1px solid currentColor;border-radius:2px}
+.nav-switch i::before{content:"";position:absolute;background:currentColor;border-radius:1px}
+.nav-switch .top i::before{left:1px;right:1px;top:1px;height:3px}
+.nav-switch .side i::before{top:1px;bottom:1px;left:1px;width:3px}
+.sidebar-layout{padding:4px 10px 8px;display:flex;flex-direction:column;gap:6px}
+.sidebar-layout .layout-picker{flex-wrap:wrap;gap:4px}
+.sidebar-layout .layout-picker button:not(.selected){width:27px;margin-left:4px;padding:0;opacity:1;visibility:visible;pointer-events:auto;border-width:1px}
 .titlebar-account{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 8px;border-radius:7px;color:var(--muted);max-width:160px;-webkit-app-region:no-drag}
 .titlebar-account:hover{background:var(--hover);color:var(--text)}
 .titlebar-account .avatar{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;background:var(--raised);flex:none}

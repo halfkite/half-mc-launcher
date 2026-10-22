@@ -26,6 +26,7 @@ namespace HalfMcLauncher
         private WebView2 web;
         private bool closing;
         private bool applyingCorners;
+        private bool lastMaximized;
 
         public MainForm()
         {
@@ -58,6 +59,10 @@ namespace HalfMcLauncher
         {
             base.OnResize(e);
             ApplyCorners();
+            var maximized = WindowState == FormWindowState.Maximized;
+            if (maximized == lastMaximized) return;
+            lastMaximized = maximized;
+            SendEvent("windowState", new JObject { ["maximized"] = maximized });
         }
 
         /// <summary>Windows 11 用 DWM 圆角；Windows 10 退化为窗口区域裁剪。</summary>
@@ -120,6 +125,7 @@ namespace HalfMcLauncher
                 ["appVersion"] = Program.Version,
                 ["memoryMb"] = SystemMemory.TotalMegabytes(),
                 ["scanWarnings"] = new JArray(scan.Warnings),
+                ["maximized"] = WindowState == FormWindowState.Maximized,
                 ["authConfigured"] = true,
                 ["authClientId"] = MicrosoftAuth.ClientId(),
                 ["authSource"] = MicrosoftAuth.ClientIdSource()

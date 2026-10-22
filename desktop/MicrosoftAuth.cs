@@ -174,7 +174,7 @@ namespace HalfMcLauncher
             LastCode = code;
             LastUrl = url;
             emit("deviceCode", new JObject { ["code"] = code, ["url"] = url, ["message"] = message });
-            TryOpen(url);
+            if (!TryOpen(url)) emit("loginStage", new JObject { ["method"] = "device", ["stage"] = "浏览器未能自动打开，请手动访问 " + url });
 
             var interval = Math.Max(2, start.Value<int?>("interval") ?? 5);
             var expires = DateTime.UtcNow.AddSeconds(start.Value<int?>("expires_in") ?? 900);
@@ -230,7 +230,7 @@ namespace HalfMcLauncher
                     + "&code_challenge_method=S256&prompt=select_account";
                 emit("loginStage", new JObject { ["method"] = "browser", ["stage"] = "请在浏览器完成授权，完成后会自动添加账户" });
                 LastUrl = url;
-                TryOpen(url);
+                if (!TryOpen(url)) emit("loginStage", new JObject { ["method"] = "browser", ["stage"] = "浏览器未能自动打开，请手动访问 " + url });
 
                 string code;
                 try
@@ -454,13 +454,31 @@ namespace HalfMcLauncher
             return result;
         }
 
-        private static void TryOpen(string url)
+        private static bool TryOpen(string url)
         {
+            if (string.IsNullOrEmpty(url)) return false;
             try
             {
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+                Diagnostics.Write("auth open ok " + url);
+                return true;
             }
-            catch { }
+            catch (Exception error) { Diagnostics.Write("auth open failed: " + error.Message); }
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", "\"" + url + "\"") { UseShellExecute = true });
+                Diagnostics.Write("auth open via explorer ok " + url);
+                return true;
+            }
+            catch (Exception error) { Diagnostics.Write("auth open via explorer failed: " + error.Message); }
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("cmd.exe", "/c start \"\" \"" + url + "\"") { UseShellExecute = false, CreateNoWindow = true });
+                Diagnostics.Write("auth open via cmd ok " + url);
+                return true;
+            }
+            catch (Exception error) { Diagnostics.Write("auth open via cmd failed: " + error.Message); }
+            return false;
         }
 
         private static string ErrorMessage(JObject reply)
