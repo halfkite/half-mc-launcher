@@ -516,6 +516,67 @@ namespace HalfMcLauncher
                         return Mods.List(instance);
                     }
 
+                case "content.list":
+                    return Content.List(FindInstance(payload?.Value<string>("id")), payload?.Value<string>("kind") ?? "resourcepacks");
+
+                case "content.toggle":
+                    return Content.Toggle(FindInstance(payload?.Value<string>("id")), payload.Value<string>("kind"), payload.Value<string>("file"));
+
+                case "content.reveal":
+                    {
+                        Content.Reveal(FindInstance(payload?.Value<string>("id")), payload.Value<string>("kind"), payload.Value<string>("file"));
+                        return new JValue(true);
+                    }
+
+                case "content.delete":
+                    {
+                        var instance = FindInstance(payload?.Value<string>("id"));
+                        var kind = payload.Value<string>("kind") ?? string.Empty;
+                        var file = payload.Value<string>("file") ?? string.Empty;
+                        var confirm = MessageBox.Show(Form, "将 " + file + " 移至回收站？", "删除内容", MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
+                        if (confirm != DialogResult.OK) return JValue.CreateNull();
+                        return Content.Delete(instance, kind, file);
+                    }
+
+                case "content.import":
+                    {
+                        var instance = FindInstance(payload?.Value<string>("id"));
+                        var kind = payload?.Value<string>("kind") ?? "resourcepacks";
+                        if (kind == "saves")
+                        {
+                            using (var dialog = new FolderBrowserDialog { Description = "选择要导入的存档文件夹" })
+                            {
+                                if (dialog.ShowDialog(Form) != DialogResult.OK) return JValue.CreateNull();
+                                return Content.Import(instance, kind, new[] { dialog.SelectedPath });
+                            }
+                        }
+                        using (var dialog = new OpenFileDialog
+                        {
+                            Multiselect = true,
+                            Filter = kind == "screenshots" ? "图片|*.png;*.jpg;*.jpeg" : "ZIP|*.zip"
+                        })
+                        {
+                            if (dialog.ShowDialog(Form) != DialogResult.OK) return JValue.CreateNull();
+                            return Content.Import(instance, kind, dialog.FileNames);
+                        }
+                    }
+
+                case "content.backups":
+                    return Content.Backups(FindInstance(payload?.Value<string>("id")));
+
+                case "content.backup":
+                    return Content.BackupSave(FindInstance(payload?.Value<string>("id")), payload.Value<string>("file"));
+
+                case "content.restore":
+                    {
+                        var instance = FindInstance(payload?.Value<string>("id"));
+                        var backup = payload.Value<string>("file") ?? string.Empty;
+                        var confirm = MessageBox.Show(Form, "还原备份 " + backup + "？同名存档将被替换。", "还原存档",
+                            MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
+                        if (confirm != DialogResult.OK) return JValue.CreateNull();
+                        return Content.RestoreSave(instance, backup);
+                    }
+
                 case "task.cancel": return new JValue(Form.Launch.CancelTask(payload?.ToString()));
                 case "logs.export": return new JValue(false);
 
