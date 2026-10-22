@@ -48,6 +48,20 @@
 .titlebar-account:hover{background:var(--hover);color:var(--text)}
 .titlebar-account .avatar{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;background:var(--raised);flex:none}
 .titlebar-account>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:calc(10px * var(--font-scale,1))}
+.account-switcher{position:relative;display:flex;align-items:center;-webkit-app-region:no-drag}
+.account-menu{top:calc(100% + 5px);left:0;right:auto;min-width:230px;z-index:66}
+.account-menu-item>button{width:100%;display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:6px;text-align:left;font-size:calc(11px * var(--font-scale,1))}
+.account-menu-item>button:hover,.account-menu-item>button.active{background:var(--hover)}
+.account-menu-item>button>span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.account-strip{display:flex;align-items:center;margin-left:2px;max-width:190px;overflow:hidden;position:relative;animation:slide-in .12s ease}
+.account-chip{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:var(--raised);border:1px solid var(--line);flex:none;transition:transform .12s}
+.account-chip+.account-chip{margin-left:-8px}
+.account-chip:hover{transform:translateY(-2px);z-index:2}
+.account-chip.more,.account-chip.add{font-size:calc(9px * var(--font-scale,1));color:var(--muted)}
+.side-account-list{position:absolute;left:0;right:0;bottom:calc(100% + 6px);background:var(--raised);border:1px solid var(--line);border-radius:9px;padding:6px;box-shadow:var(--shadow);z-index:30;display:flex;flex-direction:column;gap:2px}
+.side-account-list button{display:flex;align-items:center;gap:8px;padding:6px;border-radius:6px;text-align:left;font-size:calc(10px * var(--font-scale,1))}
+.side-account-list button:hover{background:var(--hover)}
+.side-account-list span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .brand-text{font-weight:600;font-size:calc(14px * var(--font-scale,1));letter-spacing:.02em}
 .resize-handles i{position:fixed;z-index:48;display:block}
 .resize-handles i[data-edge=top]{top:0;left:12px;right:12px;height:5px;cursor:n-resize}

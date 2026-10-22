@@ -241,6 +241,30 @@ namespace HalfMcLauncher
                         return new JValue(true);
                     }
 
+                case "account.refresh":
+                    {
+                        var id = payload?.ToString();
+                        var accounts = Store.State["accounts"] as JArray ?? new JArray();
+                        var target = accounts.FirstOrDefault(item => item.Value<string>("id") == id);
+                        if (target == null || target.Value<string>("kind") != "microsoft") return new JValue(false);
+                        try
+                        {
+                            var info = await MicrosoftAuth.RefreshAccountAsync(id, CancellationToken.None);
+                            target["name"] = info["name"];
+                            target["uuid"] = info["uuid"];
+                            target["skin"] = info["skin"];
+                            target["cape"] = info["cape"];
+                            Store.Save();
+                            Form.SendEvent("snapshot", Form.BuildSnapshot());
+                            return new JValue(true);
+                        }
+                        catch (Exception error)
+                        {
+                            Diagnostics.Write("account refresh failed: " + error.Message);
+                            return new JValue(false);
+                        }
+                    }
+
                 case "account.select":
                     {
                         var id = payload?.ToString();

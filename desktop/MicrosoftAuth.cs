@@ -126,7 +126,9 @@ namespace HalfMcLauncher
                     ["name"] = profile.Name,
                     ["uuid"] = profile.Uuid,
                     ["expiresAt"] = profile.ExpiresAt,
-                    ["kind"] = "microsoft"
+                    ["kind"] = "microsoft",
+                    ["skin"] = profile.SkinUrl ?? string.Empty,
+                    ["cape"] = profile.CapeUrl ?? string.Empty
                 };
             }
             catch (Exception error)
@@ -344,7 +346,15 @@ namespace HalfMcLauncher
             }, ct);
             var access = mc.Value<string>("access_token");
             if (string.IsNullOrEmpty(access)) throw new InvalidOperationException("Minecraft 未返回访问令牌");
+            var profile = await ProfileFromTokenAsync(access, ct);
+            profile.AccessToken = access;
+            profile.ExpiresAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + (long)(mc.Value<double?>("expires_in") ?? 86400) * 1000;
+            return profile;
+        }
 
+        /// <summary>用已有 Minecraft 访问令牌读取档案（名字、皮肤、披风）。</summary>
+        public static async Task<Profile> ProfileFromTokenAsync(string access, CancellationToken ct)
+        {
             var request = new HttpRequestMessage(HttpMethod.Get, "https://api.minecraftservices.com/minecraft/profile");
             request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + access);
             using (var response = await Http.SendAsync(request, ct))
@@ -359,10 +369,33 @@ namespace HalfMcLauncher
                 {
                     Uuid = uuid,
                     Name = name,
-                    AccessToken = access,
-                    ExpiresAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + (long)(mc.Value<double?>("expires_in") ?? 86400) * 1000
+                    SkinUrl = SecureUrl((profile["skins"] as JArray)?.FirstOrDefault()?.Value<string>("url")),
+                    CapeUrl = SecureUrl((profile["capes"] as JArray)?.FirstOrDefault()?.Value<string>("url"))
                 };
             }
+        }
+
+        /// <summary>刷新账户资料：名字、皮肤、披风。令牌失效时会自动续期。</summary>
+        public static async Task<JObject> RefreshAccountAsync(string accountId, CancellationToken ct)
+        {
+            var access = await SessionAsync(accountId, ct);
+            var profile = await ProfileFromTokenAsync(access, ct);
+            return new JObject
+            {
+                ["name"] = profile.Name,
+                ["uuid"] = profile.Uuid,
+                ["skin"] = profile.SkinUrl ?? string.Empty,
+                ["cape"] = profile.CapeUrl ?? string.Empty
+            };
+        }
+
+        /// <summary>Mojang 的皮肤链接常是 http，页面在 https 下会被拦截，统一升级到 https。</summary>
+        private static string SecureUrl(string url)
+        {
+            if (string.IsNullOrEmpty(url)) return url;
+            return url.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                ? "https://" + url.Substring(7)
+                : url;
         }
 
         private static async Task<TokenResult> RefreshAsync(string clientId, string refreshToken, CancellationToken ct)
@@ -434,12 +467,14 @@ namespace HalfMcLauncher
             public string RefreshToken { get; set; }
         }
 
-        private sealed class Profile
+        internal sealed class Profile
         {
             public string Uuid { get; set; }
             public string Name { get; set; }
             public string AccessToken { get; set; }
             public long ExpiresAt { get; set; }
+            public string SkinUrl { get; set; }
+            public string CapeUrl { get; set; }
         }
 
         private static string RandomToken(int bytes)
@@ -569,9 +604,10 @@ namespace HalfMcLauncher
                     args = space < 0 ? string.Empty : expanded.Substring(space + 1).Trim();
                 }
                 if (string.IsNullOrEmpty(exe) || !File.Exists(exe)) return false;
-                if (args.Contains("%1")) args = args.Replace("%1", "\"" + url + "\"");
-                else if (args.Contains("%L")) args = args.Replace("%L", "\"" + url + "\"");
-                else if (args.Contains("%*")) args = args.Replace("%*", "\"" + url + "\"");
+                // 占位符可能已经被引号包住（例如 "%1"），这里只替换成裸链接，避免出现双引号。
+                if (args.Contains("%1")) args = args.Replace("%1", url);
+                else if (args.Contains("%L")) args = args.Replace("%L", url);
+                else if (args.Contains("%*")) args = args.Replace("%*", url);
                 else args = (args + " \"" + url + "\"").Trim();
                 var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exe, args) { UseShellExecute = false });
                 if (process == null) return false;
