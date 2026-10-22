@@ -24,9 +24,9 @@ const editor=ref<Instance|null>(null),modInstance=ref<Instance|null>(null)
 const searchQuery=ref(''),searchInput=ref<HTMLInputElement>()
 const searchPages=computed(()=>{const q=searchQuery.value.trim().toLowerCase();const ids:(Tab['page'])[]=['instances','resources','tasks','tools','settings','plugins'];return ids.map(id=>({id,...pages[id]})).filter(p=>!q||p.title.toLowerCase().includes(q)||p.sub.toLowerCase().includes(q))})
 const searchInstances=computed(()=>{const q=searchQuery.value.trim().toLowerCase();return data.instances.filter(i=>!q||i.name.toLowerCase().includes(q)||(i.loader||'').toLowerCase().includes(q)).slice(0,8)})
-const instanceTarget=computed(()=>{let id='';try{id=sessionStorage.getItem('half.instanceSettings')||''}catch{};return data.instances.find(i=>i.id===id)||data.instances[0]||null});
+const instanceTarget=computed(()=>{let id=props.tab.view.instanceId||'';if(!id){try{id=sessionStorage.getItem('half.instanceSettings')||''}catch{}}return data.instances.find(i=>i.id===id)||data.instances[0]||null});
 const modsTarget=computed(()=>{let id='';try{id=sessionStorage.getItem('half.modsInstance')||''}catch{};return data.instances.find(i=>i.id===id)||data.instances[0]||null})
-function openInstanceSettings(i:Instance){try{sessionStorage.setItem('half.instanceSettings',i.id)}catch{};emit('navigate','instance')}
+function openInstanceSettings(i:Instance){props.tab.view.instanceId=i.id;emit('navigate','instance')}
 function openMods(i:Instance){try{sessionStorage.setItem('half.modsInstance',i.id)}catch{};emit('navigate','mods')}
 function searchEnter(){const first=searchPages.value[0];if(first){emit('navigate',first.id);return}const instance=searchInstances.value[0];if(instance)void launch(instance)}
 const downloadKind=view<string>('downloadKind','mod')
