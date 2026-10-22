@@ -167,8 +167,9 @@ html.reduce-motion body::before{animation:none}
 .sidebar nav>button{position:relative}
 .sidebar.collapsed nav>button::after{content:attr(data-name);position:absolute;left:calc(100% + 10px);top:50%;transform:translateY(-50%) translateX(-4px);padding:4px 9px;border-radius:7px;background:var(--raised);border:1px solid var(--line);box-shadow:var(--depth-1);color:var(--text);font-size:calc(10px * var(--font-scale,1));white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .12s,transform .12s;z-index:80}
 .sidebar.collapsed nav>button:hover::after{opacity:1;transform:translateY(-50%) translateX(0)}
-.side-account-chips{position:absolute;left:0;bottom:calc(100% + 8px);display:flex;flex-direction:column;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:5px;box-shadow:var(--depth-2);z-index:40}
-.sidebar.collapsed .side-account-chips{left:50%;transform:translateX(-50%)}
+.side-account-chips{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(100% + 6px);display:flex;flex-direction:row;align-items:center;gap:6px;width:max-content;background:transparent;border:0;padding:0;box-shadow:none;z-index:40}
+.side-account-chips::before{content:"";position:absolute;left:0;right:0;bottom:-10px;height:10px}
+.side-account-chips .account-avatar{width:24px!important;height:24px!important}
 .sidebar{container-type:inline-size}
 .sidebar nav>button>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .search-shortcut span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
