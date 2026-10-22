@@ -40,6 +40,9 @@ try {
   New-Item -ItemType Directory -Force (Split-Path $target) | Out-Null
   Remove-Item $target -Force -ErrorAction SilentlyContinue
   Copy-Item $exe $target
+  # 去掉网络来源标记，避免双击时弹出“无法验证发布者”的安全警告
+  try { Unblock-File -LiteralPath $target -ErrorAction Stop } catch { }
+  Remove-Item -LiteralPath ($target + ':Zone.Identifier') -ErrorAction SilentlyContinue
 
   Write-Host ''
   Write-Host ("单文件 EXE：{0:N2} MB（{1}）" -f ((Get-Item $target).Length / 1MB), $version)
