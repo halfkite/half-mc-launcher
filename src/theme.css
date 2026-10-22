@@ -389,3 +389,10 @@ kbd{border:1px solid var(--line-soft);background:var(--raised);border-radius:5px
 .java-download-row{margin:8px 0 6px;flex-wrap:wrap}
 
 .update-badge{font-size:9px;color:var(--green);background:var(--green-bg);border-radius:5px;padding:1px 5px;white-space:nowrap}
+
+.verify-list{margin-top:10px;border:1px solid var(--line-soft);border-radius:10px;background:var(--panel);max-height:260px;overflow:auto}
+.verify-row{display:flex;gap:8px;align-items:center;padding:7px 10px;border-bottom:1px solid var(--line-soft);font-size:10px}
+.verify-row:last-child{border-bottom:0}
+.verify-row span{flex:none;color:var(--faint);background:var(--raised);border-radius:5px;padding:1px 5px;font-size:9px}
+.verify-row b{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.verify-row small{color:var(--faint);margin-left:auto;white-space:nowrap}

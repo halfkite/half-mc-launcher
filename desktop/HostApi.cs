@@ -643,6 +643,15 @@ namespace HalfMcLauncher
                         return await ModUpdates.ApplyAsync(FindInstance(request.Value<string>("id")), request["update"] as JObject ?? new JObject(), CancellationToken.None);
                     }
 
+                case "instance.verify":
+                    return VersionCheck.Verify(FindInstance(payload is JObject verifyRequest ? verifyRequest.Value<string>("id") : payload?.ToString()));
+
+                case "instance.repair":
+                    {
+                        var request = payload as JObject ?? new JObject();
+                        return await VersionCheck.RepairAsync(FindInstance(request.Value<string>("id")), message => Form.SendEvent("repairProgress", message), CancellationToken.None);
+                    }
+
                 case "task.cancel": return new JValue(Form.Launch.CancelTask(payload?.ToString()));
                 case "logs.export": return new JValue(false);
 
