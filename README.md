@@ -2,6 +2,9 @@
 
 面向 Windows 的 Minecraft Java 启动器。新工作区默认单栏，可选择五种多栏布局；每栏可以打开完整页面，每个标签保留自己的搜索、筛选和页面状态。当前为 0.1.0 修订版 r5：产品名统一为 Half Mc Launcher，微软登录免配置，并裁剪了安装包体积。
 
+> **开发状态**：Electron 版（`main` 分支、本 README 所述的 `npm run dist`）已冻结，不再新增功能。
+> 后续开发全部在 `refactor/desktop` 分支的 C# + WebView2 单文件版上进行，见 `desktop/README.md`。
+
 ## 直接使用
 
 1. 双击 `release/Half-Mc-Launcher-0.1.0-x64.exe`。这是便携版，无需安装 Node.js。

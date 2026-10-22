@@ -273,10 +273,10 @@ namespace HalfMcLauncher
             emit("tasks", TasksJson());
         }
 
-        /// <summary>下载并安装原版到指定根目录，返回任务 ID。进度通过 tasks 事件推给界面。</summary>
-        public string StartInstall(string version, string root)
+        /// <summary>通用后台任务：带取消、进度文案与错误处理。</summary>
+        public string StartTask(string title, string instanceId, string root, Func<Action<string>, CancellationToken, Task> work, string successDetail = "完成")
         {
-            var task = AddTask("安装 " + version, null);
+            var task = AddTask(title, instanceId);
             var taskId = task.Value<string>("id");
             var cts = new CancellationTokenSource();
             installs[taskId] = cts;
@@ -284,25 +284,25 @@ namespace HalfMcLauncher
             {
                 try
                 {
-                    UpdateTask(task, "running", 5, "准备下载文件");
-                    Log("开始安装 " + version + " 到 " + root);
-                    var path = new MinecraftPath(root);
-                    path.CreateDirs();
-                    var launcher = new MinecraftLauncher(MinecraftLauncherParameters.CreateDefault(path));
-                    await launcher.InstallAsync(version, cts.Token);
-                    UpdateTask(task, "success", 100, "安装完成");
-                    Log("安装完成：" + version);
+                    UpdateTask(task, "running", 5, "准备中");
+                    await work(text =>
+                    {
+                        Log(text, "info", instanceId);
+                        UpdateTask(task, "running", task.Value<int?>("progress") ?? 5, text);
+                    }, cts.Token);
+                    UpdateTask(task, "success", 100, successDetail);
+                    Log(title + "：" + successDetail, "info", instanceId);
                     emit("snapshot", snapshot());
                 }
                 catch (OperationCanceledException)
                 {
                     UpdateTask(task, "cancelled", 100, "已取消");
-                    Log("安装已取消：" + version, "error");
+                    Log(title + "已取消", "error", instanceId);
                 }
                 catch (Exception error)
                 {
                     UpdateTask(task, "error", 100, error.Message);
-                    Log("安装失败：" + error.Message, "error");
+                    Log(title + "失败：" + error.Message, "error", instanceId);
                 }
                 finally
                 {
@@ -311,6 +311,33 @@ namespace HalfMcLauncher
                 }
             });
             return taskId;
+        }
+
+        /// <summary>下载原版（可选）再安装加载器，返回任务 ID。</summary>
+        public string StartInstall(string version, string loader, string loaderVersion, string root, string javaPath)
+        {
+            var name = "安装 " + version + (string.IsNullOrEmpty(loader) || loader == "vanilla" ? "" : " · " + loader);
+            return StartTask(name, null, root, async (progress, ct) =>
+            {
+                progress("下载原版 " + version);
+                var path = new MinecraftPath(root);
+                path.CreateDirs();
+                var launcher = new MinecraftLauncher(MinecraftLauncherParameters.CreateDefault(path));
+                await launcher.InstallAsync(version, ct);
+                if (!string.IsNullOrEmpty(loader) && loader != "vanilla")
+                    await Loaders.InstallAsync(version, loader, loaderVersion, root, javaPath, ct, progress);
+            }, "安装完成");
+        }
+
+        /// <summary>安装下载页选中的资源（含必要依赖）到实例。</summary>
+        public string StartResourceInstall(JObject selection, JObject instance, ResourceService resources)
+        {
+            var name = "安装资源到 " + (instance.Value<string>("name") ?? "实例");
+            return StartTask(name, instance.Value<string>("id"), instance.Value<string>("gameDir"), async (progress, ct) =>
+            {
+                var count = await resources.InstallAsync(selection, instance, progress, ct);
+                progress("已安装 " + count + " 个文件（含必要依赖）");
+            }, "资源安装完成");
         }
 
         public bool CancelTask(string id)

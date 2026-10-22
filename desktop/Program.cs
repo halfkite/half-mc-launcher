@@ -2,7 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Threading;
 using System.Windows.Forms;
+using ICSharpCode.SharpZipLib.Zip;
+using Newtonsoft.Json.Linq;
 
 namespace HalfMcLauncher
 {
@@ -19,6 +23,8 @@ namespace HalfMcLauncher
                 return SelfTest();
             if (args != null && args.Any(item => string.Equals(item, "--check-versions", StringComparison.OrdinalIgnoreCase)))
                 return CheckVersions();
+            if (args != null && args.Any(item => string.Equals(item, "--check-downloads", StringComparison.OrdinalIgnoreCase)))
+                return CheckDownloads();
 
             Bootstrap.EnableDpiAwareness();
             Bootstrap.ExtractNativeLoader();
@@ -54,6 +60,92 @@ namespace HalfMcLauncher
             catch { }
         }
 
+        /// <summary>下载与模组管线的无界面自检：Modrinth 搜索、Fabric 版本、JAR 信息与图标。</summary>
+        private static int CheckDownloads()
+        {
+            var lines = new List<string>();
+            var ok = true;
+            try
+            {
+                var resources = new ResourceService(AppPaths.DataDir);
+                var search = resources.SearchAsync(new JObject
+                {
+                    ["source"] = "modrinth",
+                    ["kind"] = "mod",
+                    ["query"] = "sodium",
+                    ["offset"] = 0
+                }, CancellationToken.None).GetAwaiter().GetResult();
+                var total = search.Value<int?>("total") ?? 0;
+                var first = search["projects"]?.FirstOrDefault();
+                lines.Add("search=" + total + " first=" + first?["name"]);
+                if (total <= 0) ok = false;
+
+                var projectId = first?["id"]?.ToString();
+                var gameRoot = Path.Combine(AppPaths.DataDir, "dl-test");
+                Directory.CreateDirectory(Path.Combine(gameRoot, "mods"));
+                var instance = new JObject
+                {
+                    ["id"] = "dl", ["root"] = gameRoot, ["gameDir"] = gameRoot,
+                    ["name"] = "dl-test", ["minecraft"] = "1.21.1", ["loader"] = "Fabric"
+                };
+                var selection = new JObject { ["source"] = "modrinth", ["kind"] = "mod", ["projectId"] = projectId };
+                var versions = resources.VersionsAsync(selection, instance, CancellationToken.None).GetAwaiter().GetResult();
+                lines.Add("versions=" + versions.Count);
+                if (versions.Count == 0) ok = false;
+                else
+                {
+                    selection["versionId"] = versions[0]?["id"]?.ToString();
+                    var plan = resources.PlanAsync(selection, instance, CancellationToken.None).GetAwaiter().GetResult();
+                    lines.Add("plan=" + plan.Count);
+                    var installed = resources.InstallAsync(selection, instance, _ => { }, CancellationToken.None).GetAwaiter().GetResult();
+                    var files = Directory.GetFiles(Path.Combine(gameRoot, "mods")).Length;
+                    lines.Add("installed=" + installed + " files=" + files);
+                    if (installed <= 0 || files <= 0) ok = false;
+                }
+                Directory.Delete(gameRoot, true);
+            }
+            catch (Exception error) { ok = false; lines.Add("search-error=" + error.Message); }
+
+            try
+            {
+                var loaders = Loaders.ListAsync("1.21.1", "fabric", CancellationToken.None).GetAwaiter().GetResult();
+                lines.Add("fabric-loaders=" + loaders.Count);
+                if (loaders.Count == 0) ok = false;
+            }
+            catch (Exception error) { ok = false; lines.Add("loader-error=" + error.Message); }
+
+            try
+            {
+                var root = Path.Combine(AppPaths.DataDir, "modtest");
+                var modsDir = Path.Combine(root, "mods");
+                Directory.CreateDirectory(modsDir);
+                var jar = Path.Combine(modsDir, "demo.jar");
+                using (var file = File.Create(jar))
+                using (var zip = new ZipOutputStream(file))
+                {
+                    void Add(string name, byte[] data)
+                    {
+                        var entry = new ZipEntry(name) { Size = data.Length };
+                        zip.PutNextEntry(entry);
+                        zip.Write(data, 0, data.Length);
+                        zip.CloseEntry();
+                    }
+                    Add("fabric.mod.json", Encoding.UTF8.GetBytes("{\"id\":\"demo\",\"name\":\"Demo Mod\",\"version\":\"1.0\",\"icon\":\"icon.png\"}"));
+                    Add("icon.png", new byte[] { 0x89, 0x50, 0x4E, 0x47 });
+                }
+                var instance = new JObject { ["id"] = "modtest", ["root"] = root, ["gameDir"] = root, ["name"] = "modtest" };
+                var list = Mods.List(instance);
+                var hasIcon = !string.IsNullOrEmpty(list.FirstOrDefault()?["icon"]?.ToString());
+                lines.Add("mods=" + list.Count + " name=" + list.FirstOrDefault()?["name"] + " icon=" + hasIcon);
+                if (list.Count != 1 || !hasIcon) ok = false;
+                Directory.Delete(root, true);
+            }
+            catch (Exception error) { ok = false; lines.Add("mod-error=" + error.Message); }
+
+            File.WriteAllLines(Path.Combine(AppPaths.DataDir, "download-check.txt"), lines);
+            return ok ? 0 : 1;
+        }
+
         /// <summary>下载页“游戏源”自检：取 Mojang 版本清单并记录数量。</summary>
         private static int CheckVersions()
         {
@@ -86,6 +178,8 @@ namespace HalfMcLauncher
                 report.Add("web=" + File.Exists(Path.Combine(AppPaths.WebRoot, "index.html")));
                 report.Add("newtonsoft=" + (Type.GetType("Newtonsoft.Json.JsonConvert, Newtonsoft.Json") != null));
                 report.Add("cmllib=" + (Type.GetType("CmlLib.Core.MinecraftLauncher, CmlLib.Core") != null));
+                report.Add("forge=" + (Type.GetType("CmlLib.Core.Installer.Forge.ForgeInstaller, CmlLib.Core.Installer.Forge") != null));
+                report.Add("sharpzip=" + (Type.GetType("ICSharpCode.SharpZipLib.Zip.ZipFile, ICSharpCode.SharpZipLib") != null));
                 report.Add("webview2=" + (Type.GetType("Microsoft.Web.WebView2.Core.CoreWebView2Environment, Microsoft.Web.WebView2.Core") != null));
             }
             catch (Exception error)

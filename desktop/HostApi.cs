@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Newtonsoft.Json.Linq;
@@ -13,13 +14,19 @@ using Newtonsoft.Json.Linq;
 namespace HalfMcLauncher
 {
     /// <summary>
-    /// 外壳对外暴露的 IPC。已接入的方法覆盖实例浏览、设置、账户、Java 与启动；
+    /// 外壳对外暴露的 IPC。已接入的方法覆盖实例浏览、设置、账户、Java、启动、下载与模组管理；
     /// 未接入的方法返回空数据或明确提示，避免界面在未实现的页面上崩溃。
     /// </summary>
     internal static class HostApi
     {
         private static MainForm Form { get { return Program.MainWindow; } }
         private static ConfigStore Store { get { return Program.MainWindow.Store; } }
+        private static ResourceService resources;
+
+        private static ResourceService Resources
+        {
+            get { return resources ?? (resources = new ResourceService(AppPaths.DataDir)); }
+        }
 
         internal static async Task<JToken> HandleAsync(string method, JToken payload)
         {
@@ -276,16 +283,17 @@ namespace HalfMcLauncher
                         return new JValue(true);
                     }
 
-                // 以下页面尚未接入：返回空数据，界面显示空状态而不是报错。
+                // 下载、资源与模组
                 case "versions": return await VersionsAsync();
 
                 case "install":
                     {
                         var version = payload?.Value<string>("version")?.Trim();
-                        var loader = payload?.Value<string>("loader") ?? "vanilla";
+                        var loader = (payload?.Value<string>("loader") ?? "vanilla").ToLowerInvariant();
+                        var loaderVersion = payload?.Value<string>("loaderVersion") ?? string.Empty;
                         if (string.IsNullOrEmpty(version)) throw new InvalidOperationException("请选择游戏版本");
-                        if (loader != "vanilla")
-                            throw new NotSupportedException("当前构建只支持原版安装，Fabric/Forge 等加载器在下一阶段接入");
+                        if (loader != "vanilla" && string.IsNullOrEmpty(loaderVersion))
+                            throw new InvalidOperationException("请选择 " + loader + " 版本");
                         var root = Path.Combine(AppPaths.BaseDir, "minecraft");
                         Directory.CreateDirectory(Path.Combine(root, "versions"));
                         var sources = Store.State["sources"] as JArray ?? new JArray();
@@ -296,13 +304,89 @@ namespace HalfMcLauncher
                             Store.Save();
                             Form.Rescan();
                         }
-                        return new JValue(Form.Launch.StartInstall(version, root));
+                        var javaPath = loader == "forge" || loader == "neoforge" ? EnsureJava() : null;
+                        return new JValue(Form.Launch.StartInstall(version, loader, loaderVersion, root, javaPath));
                     }
-                case "loaders.list": return new JArray();
+
+                case "loaders.list":
+                    {
+                        var minecraft = payload?.Value<string>("minecraft") ?? string.Empty;
+                        var loader = payload?.Value<string>("loader") ?? "vanilla";
+                        return await Loaders.ListAsync(minecraft, loader, CancellationToken.None);
+                    }
+
+                case "resource.search":
+                    return await Resources.SearchAsync(payload as JObject ?? new JObject(), CancellationToken.None);
+
+                case "resource.versions":
+                    {
+                        var selection = payload?["selection"] as JObject ?? new JObject();
+                        var instanceId = payload?.Value<string>("instanceId");
+                        var instance = string.IsNullOrEmpty(instanceId) ? null : FindInstance(instanceId);
+                        return await Resources.VersionsAsync(selection, instance, CancellationToken.None);
+                    }
+
+                case "resource.plan":
+                    {
+                        var selection = payload?["selection"] as JObject ?? new JObject();
+                        var instance = FindInstance(payload?.Value<string>("instanceId"));
+                        return await Resources.PlanAsync(selection, instance, CancellationToken.None);
+                    }
+
+                case "resource.install":
+                    {
+                        var selection = payload?["selection"] as JObject ?? new JObject();
+                        var instance = FindInstance(payload?.Value<string>("instanceId"));
+                        return new JValue(Form.Launch.StartResourceInstall(selection, instance, Resources));
+                    }
+
+                case "resource.configure":
+                    if (payload == null || payload.Type == JTokenType.Null) return new JValue(Resources.Configured());
+                    return new JValue(Resources.Configure(payload.ToString()));
+
+                case "resource.open":
+                    return new JValue(await Resources.ProjectUrlAsync(payload as JObject ?? new JObject(), CancellationToken.None));
+
                 case "plugins.list": return new JArray();
-                case "mods.list": return new JArray();
+
+                case "mods.list":
+                    return Mods.List(FindInstance(payload?.ToString()));
+
+                case "mods.import":
+                    {
+                        var instance = FindInstance(payload?.ToString());
+                        using (var dialog = new OpenFileDialog
+                        {
+                            Title = "导入本地模组",
+                            Filter = "Minecraft 模组|*.jar",
+                            Multiselect = true
+                        })
+                        {
+                            if (dialog.ShowDialog(Form) != DialogResult.OK) return JValue.CreateNull();
+                            Mods.Import(instance, dialog.FileNames);
+                            return Mods.List(instance);
+                        }
+                    }
+
+                case "mods.toggle":
+                    {
+                        var instance = FindInstance(payload?.Value<string>("id"));
+                        Mods.Toggle(instance, payload.Value<string>("file"));
+                        return Mods.List(instance);
+                    }
+
+                case "mods.delete":
+                    {
+                        var instance = FindInstance(payload?.Value<string>("id"));
+                        var file = payload.Value<string>("file");
+                        var confirm = MessageBox.Show(Form, "将 " + file + " 移至回收站？", "删除模组",
+                            MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
+                        if (confirm != DialogResult.OK) return JValue.CreateNull();
+                        Mods.Delete(instance, file);
+                        return Mods.List(instance);
+                    }
+
                 case "task.cancel": return new JValue(Form.Launch.CancelTask(payload?.ToString()));
-                case "resource.configure": return new JValue(false);
                 case "logs.export": return new JValue(false);
 
                 case "window.minimize": Form.WindowState = FormWindowState.Minimized; return new JValue(true);
@@ -341,6 +425,17 @@ namespace HalfMcLauncher
             }
             versionCache = list;
             return list;
+        }
+
+        private static string EnsureJava()
+        {
+            var settings = Store.Settings;
+            var configured = settings.Value<string>("java");
+            if (!string.IsNullOrWhiteSpace(configured) && File.Exists(configured)) return configured;
+            var roots = (settings["javaRoots"] as JArray ?? new JArray()).Select(item => item.ToString()).ToList();
+            var installed = JavaDetector.Discover(new[] { configured }, roots);
+            if (installed.Count == 0) throw new InvalidOperationException("安装 Forge/NeoForge 需要 Java，请先在工具箱中检测 Java");
+            return installed.OrderByDescending(item => item.Value<int>("major")).First().Value<string>("path");
         }
 
         private static Task<JToken> DetectJava()
