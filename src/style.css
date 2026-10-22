@@ -111,3 +111,11 @@ html.glass .sidebar,html.glass .titlebar{background:color-mix(in srgb,var(--side
 .workspace.single [data-page=install] .page-header,.workspace.single [data-page=install] .page-scroll,.workspace.single [data-page=settings] .page-header,.workspace.single [data-page=settings] .page-scroll{max-width:1040px;margin-left:auto;margin-right:auto}
 :root[data-theme=light]{background:radial-gradient(1200px 820px at 6% -12%,#b7d4ff 0%,transparent 62%),radial-gradient(1000px 720px at 104% -4%,#cdecc0 0%,transparent 62%),radial-gradient(980px 760px at 58% 116%,#ffe0b8 0%,transparent 62%),linear-gradient(135deg,#dbe7ff 0%,#e6f3ea 48%,#ffe9cf 100%)}
 :root:not([data-theme=light]){background:radial-gradient(1100px 800px at 8% -12%,#1d3a2b 0%,transparent 62%),radial-gradient(1000px 720px at 104% -4%,#10283f 0%,transparent 62%),radial-gradient(900px 700px at 58% 116%,#2a2033 0%,transparent 62%),linear-gradient(135deg,#0d1826 0%,#0c1712 50%,#1d1524 100%)}
+.workspace.single .page-header,.workspace.single .instance-toolbar,.workspace.single .page-scroll{max-width:none;margin-left:0;margin-right:0;padding-left:28px;padding-right:28px}
+.workspace.single [data-page=install] .page-header,.workspace.single [data-page=install] .page-scroll,.workspace.single [data-page=settings] .page-header,.workspace.single [data-page=settings] .page-scroll{max-width:1040px;margin-left:auto;margin-right:auto;padding-left:10px;padding-right:10px}
+.section,.install-summary{box-shadow:none}
+.instance-card{padding-left:16px;padding-right:16px}
+html.glass body::before{content:"";position:fixed;inset:-18%;z-index:-1;pointer-events:none;background:radial-gradient(38% 34% at 22% 28%,#6fa8ff 0%,transparent 62%),radial-gradient(36% 32% at 80% 30%,#7fd497 0%,transparent 62%),radial-gradient(40% 40% at 55% 82%,#ffb877 0%,transparent 64%);filter:blur(46px);opacity:.92;animation:auroraDrift 26s ease-in-out infinite}
+html.glass:not([data-theme=light]) body::before{background:radial-gradient(38% 34% at 22% 28%,#1f5f8f 0%,transparent 62%),radial-gradient(36% 32% at 80% 30%,#1f7a4a 0%,transparent 62%),radial-gradient(40% 40% at 55% 82%,#5a2f70 0%,transparent 64%);opacity:.95}
+@keyframes auroraDrift{0%{transform:translate3d(-3%,-2%,0) scale(1)}50%{transform:translate3d(3%,2%,0) scale(1.08)}100%{transform:translate3d(-3%,-2%,0) scale(1)}}
+html.reduce-motion body::before{animation:none}
