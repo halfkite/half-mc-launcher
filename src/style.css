@@ -205,3 +205,11 @@ html.reduce-motion body::before{animation:none}
 .setting-row{padding-right:0}
 .setting-row>.range{margin-right:0}
 .workspace.single [data-page=settings] .page-header,.workspace.single [data-page=settings] .page-scroll{max-width:none;padding-left:28px;padding-right:28px}
+
+.instance-page{height:100%;display:flex;flex-direction:column;min-height:0}
+.instance-panel{flex:1;min-height:0;display:flex;flex-direction:column}
+.instance-panel>header{display:flex;align-items:center;justify-content:space-between;padding:14px 0 10px;border-bottom:1px solid var(--line-soft)}
+.instance-panel>header h2{font-size:calc(15px * var(--font-scale,1));margin:0}
+.instance-body{flex:1;min-height:0;overflow:auto;padding:16px 0 24px}
+.instance-panel>footer{display:flex;justify-content:flex-end;gap:8px;padding:12px 0;border-top:1px solid var(--line-soft)}
+.path-text{word-break:break-all;padding:0 0 10px}

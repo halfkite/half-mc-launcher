@@ -12,10 +12,10 @@
     <LangVersion>latest</LangVersion>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
-    <Version>0.1.0-r68</Version>
+    <Version>0.1.0-r72</Version>
     <AssemblyVersion>0.1.0.0</AssemblyVersion>
-    <FileVersion>0.1.0.68</FileVersion>
-    <InformationalVersion>0.1.0-r68</InformationalVersion>
+    <FileVersion>0.1.0.72</FileVersion>
+    <InformationalVersion>0.1.0-r72</InformationalVersion>
     <Product>Half Mc Launcher</Product>
     <Company>Half</Company>
   </PropertyGroup>
