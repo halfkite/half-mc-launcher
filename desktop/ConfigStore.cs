@@ -91,6 +91,8 @@ namespace HalfMcLauncher
                 ["clientId"] = "",
                 ["reduceMotion"] = false,
                 ["fontScale"] = 100,
+                ["opacity"] = 100,
+                ["glass"] = true,
                 ["memoryMode"] = "auto",
                 ["javaRoots"] = new JArray()
             };

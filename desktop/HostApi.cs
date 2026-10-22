@@ -139,7 +139,7 @@ namespace HalfMcLauncher
                 case "appearance.save":
                     {
                         var settings = Store.State["settings"] as JObject ?? new JObject();
-                        foreach (var key in new[] { "theme", "accent", "reduceMotion", "fontScale" })
+                        foreach (var key in new[] { "theme", "accent", "reduceMotion", "fontScale", "opacity", "glass" })
                             if (payload?[key] != null) settings[key] = payload[key].DeepClone();
                         Store.State["settings"] = settings;
                         Store.Save();
