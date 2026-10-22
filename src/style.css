@@ -163,3 +163,9 @@ html.reduce-motion body::before{animation:none}
 .side-account-list{background:var(--panel);border-radius:10px;padding:6px;box-shadow:var(--depth-2)}
 .side-account-list button{min-height:34px}
 .side-account-list .account-avatar{border-radius:6px}
+.sidebar{z-index:15}
+.sidebar nav>button{position:relative}
+.sidebar.collapsed nav>button::after{content:attr(data-name);position:absolute;left:calc(100% + 10px);top:50%;transform:translateY(-50%) translateX(-4px);padding:4px 9px;border-radius:7px;background:var(--raised);border:1px solid var(--line);box-shadow:var(--depth-1);color:var(--text);font-size:calc(10px * var(--font-scale,1));white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .12s,transform .12s;z-index:80}
+.sidebar.collapsed nav>button:hover::after{opacity:1;transform:translateY(-50%) translateX(0)}
+.side-account-chips{display:flex;gap:4px;align-items:center}
+.sidebar.collapsed .side-account-chips{position:absolute;left:calc(100% + 8px);bottom:0;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px;box-shadow:var(--depth-2);z-index:40}
