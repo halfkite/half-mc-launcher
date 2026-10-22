@@ -313,10 +313,11 @@ namespace HalfMcLauncher
             return taskId;
         }
 
-        /// <summary>下载原版（可选）再安装加载器，返回任务 ID。</summary>
-        public string StartInstall(string version, string loader, string loaderVersion, string root, string javaPath)
+        /// <summary>下载原版、安装加载器，可再叠加 OptiFine，返回任务 ID。</summary>
+        public string StartInstall(string version, string loader, string loaderVersion, string root, string javaPath, string optifine = "")
         {
-            var name = "安装 " + version + (string.IsNullOrEmpty(loader) || loader == "vanilla" ? "" : " · " + loader);
+            var name = "安装 " + version + (string.IsNullOrEmpty(loader) || loader == "vanilla" ? "" : " · " + loader)
+                       + (string.IsNullOrEmpty(optifine) ? "" : " + OptiFine");
             return StartTask(name, null, root, async (progress, ct) =>
             {
                 progress("下载原版 " + version);
@@ -326,6 +327,8 @@ namespace HalfMcLauncher
                 await launcher.InstallAsync(version, ct);
                 if (!string.IsNullOrEmpty(loader) && loader != "vanilla")
                     await Loaders.InstallAsync(version, loader, loaderVersion, root, javaPath, ct, progress);
+                if (!string.IsNullOrEmpty(optifine))
+                    await Loaders.InstallOptiFineAsync(version, optifine, root, javaPath, ct, progress);
             }, "安装完成");
         }
 

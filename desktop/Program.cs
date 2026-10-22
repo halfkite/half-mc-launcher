@@ -133,7 +133,7 @@ namespace HalfMcLauncher
                     {
                         var target = kind == "liteloader" ? "1.12.2" : "1.21.1";
                         var list = Loaders.ListAsync(target, kind, CancellationToken.None).GetAwaiter().GetResult();
-                        lines.Add(kind + "-loaders=" + list.Count);
+                        lines.Add(kind + "-loaders=" + list.Count + " stable=" + list.Count(item => item.Value<bool?>("stable") != false));
                     }
                     catch (Exception error) { ok = false; lines.Add(kind + "-loaders-error=" + error.Message); }
                 }

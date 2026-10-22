@@ -291,6 +291,7 @@ namespace HalfMcLauncher
                         var version = payload?.Value<string>("version")?.Trim();
                         var loader = (payload?.Value<string>("loader") ?? "vanilla").ToLowerInvariant();
                         var loaderVersion = payload?.Value<string>("loaderVersion") ?? string.Empty;
+                        var optifine = payload?.Value<string>("optifine") ?? string.Empty;
                         if (string.IsNullOrEmpty(version)) throw new InvalidOperationException("请选择游戏版本");
                         if (loader != "vanilla" && string.IsNullOrEmpty(loaderVersion))
                             throw new InvalidOperationException("请选择 " + loader + " 版本");
@@ -304,15 +305,25 @@ namespace HalfMcLauncher
                             Store.Save();
                             Form.Rescan();
                         }
-                        var javaPath = loader == "forge" || loader == "neoforge" ? EnsureJava() : null;
-                        return new JValue(Form.Launch.StartInstall(version, loader, loaderVersion, root, javaPath));
+                        var javaPath = loader == "forge" || loader == "neoforge" || !string.IsNullOrEmpty(optifine) ? EnsureJava() : null;
+                        return new JValue(Form.Launch.StartInstall(version, loader, loaderVersion, root, javaPath, optifine));
                     }
 
                 case "loaders.list":
                     {
                         var minecraft = payload?.Value<string>("minecraft") ?? string.Empty;
                         var loader = payload?.Value<string>("loader") ?? "vanilla";
-                        return await Loaders.ListAsync(minecraft, loader, CancellationToken.None);
+                        try
+                        {
+                            var catalog = await Loaders.ListAsync(minecraft, loader, CancellationToken.None);
+                            Diagnostics.Write("loaders.list " + minecraft + " / " + loader + " => " + catalog.Count);
+                            return catalog;
+                        }
+                        catch (Exception error)
+                        {
+                            Diagnostics.Write("loaders.list " + minecraft + " / " + loader + " failed: " + error);
+                            throw;
+                        }
                     }
 
                 case "resource.search":

@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
@@ -16,7 +18,7 @@ namespace HalfMcLauncher
 {
     /// <summary>
     /// 加载器版本列表与安装：Fabric / Quilt 走 CmlLib 内置安装器，Forge / NeoForge 调用官方安装器。
-    /// OptiFine 与 LiteLoader 暂未接入，列表会明确为空。
+    /// OptiFine / LiteLoader 的版本目录取自 BMCLAPI；OptiFine 通过官方安装器完成安装。
     /// </summary>
     internal static class Loaders
     {
@@ -35,7 +37,9 @@ namespace HalfMcLauncher
                         {
                             var version = item["loader"]?.Value<string>("version");
                             if (string.IsNullOrEmpty(version)) continue;
-                            var stable = item["loader"]?.Value<bool?>("stable") ?? !System.Text.RegularExpressions.Regex.IsMatch(version, "alpha|beta|pre|rc", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                            // Fabric 的 stable 标记只对最新版为真，会导致界面默认只剩一个选项；
+                            // 这里按版本号判断，alpha/beta/pre/rc 才算测试版。
+                            var stable = !System.Text.RegularExpressions.Regex.IsMatch(version, "alpha|beta|pre|rc", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
                             result.Add(Entry(version, stable, false, string.Empty, "官方"));
                         }
                         break;
@@ -47,7 +51,7 @@ namespace HalfMcLauncher
                         {
                             var version = item["loader"]?.Value<string>("version");
                             if (string.IsNullOrEmpty(version)) continue;
-                            var stable = item["loader"]?.Value<bool?>("stable") ?? !System.Text.RegularExpressions.Regex.IsMatch(version, "alpha|beta|pre|rc", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                            var stable = !System.Text.RegularExpressions.Regex.IsMatch(version, "alpha|beta|pre|rc", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
                             result.Add(Entry(version, stable, false, string.Empty, "官方"));
                         }
                         break;
@@ -99,7 +103,7 @@ namespace HalfMcLauncher
                         if (build == null) break;
                         var versionName = build.Value<string>("version");
                         if (string.IsNullOrEmpty(versionName)) break;
-                        result.Add(Entry(versionName, response.Value<string>("type") != "SNAPSHOT", false,
+                        result.Add(Entry(versionName, true, false,
                             "旧版组件 · " + response.Value<string>("type"), "BMCLAPI"));
                         break;
                     }
@@ -159,6 +163,61 @@ namespace HalfMcLauncher
                 default:
                     throw new NotSupportedException("暂不支持安装 " + loader + "，请选择原版、Fabric、Quilt、Forge 或 NeoForge");
             }
+        }
+
+        /// <summary>
+        /// 下载并运行 OptiFine 官方安装器。安装器是图形程序，需要用户在窗口里完成安装；
+        /// 这里负责下载、启动并等待它结束，因此可以挂在任意加载器安装之后。
+        /// </summary>
+        public static async Task InstallOptiFineAsync(string minecraft, string optifineVersion, string root, string javaPath, CancellationToken ct, Action<string> progress)
+        {
+            if (string.IsNullOrWhiteSpace(optifineVersion)) return;
+            var array = await GetJson("https://bmclapi2.bangbang93.com/optifine/" + Uri.EscapeDataString(minecraft), ct);
+            string type = null, patch = null;
+            foreach (var item in array as JArray ?? new JArray())
+            {
+                var itemType = item.Value<string>("type");
+                var itemPatch = item.Value<string>("patch");
+                if (string.IsNullOrEmpty(itemType) || string.IsNullOrEmpty(itemPatch)) continue;
+                if (itemType + "_" + itemPatch != optifineVersion) continue;
+                type = itemType; patch = itemPatch; break;
+            }
+            if (type == null) throw new InvalidOperationException("找不到 OptiFine " + optifineVersion);
+
+            var directory = Path.Combine(AppPaths.DataDir, "optifine");
+            Directory.CreateDirectory(directory);
+            var jar = Path.Combine(directory, "OptiFine_" + minecraft + "_" + optifineVersion + ".jar");
+            if (!File.Exists(jar))
+            {
+                progress?.Invoke("下载 OptiFine " + optifineVersion);
+                var url = "https://bmclapi2.bangbang93.com/optifine/" + Uri.EscapeDataString(minecraft) + "/" + Uri.EscapeDataString(type) + "/" + Uri.EscapeDataString(patch);
+                using (var response = await Http.GetAsync(url, ct))
+                {
+                    if (!response.IsSuccessStatusCode) throw new InvalidOperationException("OptiFine 下载失败（HTTP " + (int)response.StatusCode + "）");
+                    using (var input = await response.Content.ReadAsStreamAsync())
+                    using (var output = File.Create(jar))
+                        await input.CopyToAsync(output);
+                }
+            }
+
+            progress?.Invoke("运行 OptiFine 安装器，请在窗口中完成安装");
+            var executable = javaPath;
+            if (!string.IsNullOrEmpty(javaPath))
+            {
+                var windowless = Path.Combine(Path.GetDirectoryName(javaPath) ?? string.Empty, "javaw.exe");
+                if (File.Exists(windowless)) executable = windowless;
+            }
+            var start = new ProcessStartInfo(executable, "-jar \"" + jar + "\"")
+            {
+                UseShellExecute = false,
+                WorkingDirectory = root
+            };
+            using (var process = Process.Start(start))
+            {
+                if (process == null) throw new InvalidOperationException("无法启动 OptiFine 安装器");
+                await Task.Run(() => process.WaitForExit(), ct);
+            }
+            progress?.Invoke("OptiFine 安装器已结束，请刷新实例列表确认结果");
         }
 
         private static async Task<JToken> GetJson(string url, CancellationToken ct)
