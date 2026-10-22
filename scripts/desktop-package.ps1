@@ -1,4 +1,4 @@
-﻿param(
+param(
   [string]$Configuration = 'Release',
   [switch]$Launch
 )
@@ -43,6 +43,8 @@ try {
   # 去掉网络来源标记，避免双击时弹出“无法验证发布者”的安全警告
   try { Unblock-File -LiteralPath $target -ErrorAction Stop } catch { }
   Remove-Item -LiteralPath ($target + ':Zone.Identifier') -ErrorAction SilentlyContinue
+  $notices = Join-Path $root 'build/THIRD-PARTY-NOTICES.txt'
+  if (Test-Path $notices) { Copy-Item $notices (Join-Path (Split-Path $target) 'THIRD-PARTY-NOTICES.txt') -Force }
 
   # 未签名的 exe 从资源管理器直接双击时，Windows 可能弹出“未知发布者”提示。
   # 附带一个批处理入口，通过 CreateProcess 启动，可绕开该提示。

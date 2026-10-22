@@ -451,3 +451,17 @@ kbd{border:1px solid var(--line-soft);background:var(--raised);border-radius:5px
 .deps-head{display:flex;align-items:center;gap:8px;font-size:11px}
 .deps-head span{color:var(--faint);font-size:9px;flex:1}
 .deps-row{font-size:10px;color:var(--muted);padding:3px 0;border-top:1px dashed var(--line-soft);margin-top:4px}
+
+.about-page{padding-bottom:20px}
+.about-hero{display:flex;align-items:center;gap:14px;border:1px solid var(--line-soft);border-radius:14px;background:var(--panel);padding:18px 20px;margin-bottom:16px}
+.about-mark{width:54px;height:54px;border-radius:14px;background:var(--text);color:var(--bg);display:grid;place-items:center;flex:none}
+.about-title h2{font-size:24px;margin:0 0 4px;letter-spacing:-.03em}
+.about-version{margin-left:auto;font-size:11px;color:var(--faint);border:1px solid var(--line-soft);border-radius:999px;padding:4px 10px}
+.about-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.about-grid>div{display:flex;flex-direction:column;gap:3px;padding:9px 11px;border:1px solid var(--line-soft);border-radius:9px;background:var(--panel);min-width:0}
+.about-grid span{font-size:9px;color:var(--faint)}
+.about-grid b{font-size:11px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.about-grid .wide{grid-column:1/-1;flex-direction:row;align-items:center;gap:10px}
+.about-grid .wide b{flex:1}
+.about-chips{display:flex;flex-wrap:wrap;gap:6px}
+.about-chips span{font-size:9px;color:var(--muted);border:1px solid var(--line-soft);background:var(--panel);border-radius:999px;padding:4px 9px}

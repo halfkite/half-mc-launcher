@@ -309,12 +309,13 @@ namespace HalfMcLauncher
                             case "data": target = AppPaths.DataDir; break;
                             case "logs": target = AppPaths.LogDir; break;
                             case "website": target = "https://www.minecraft.net/"; break;
+                            case "notices": target = System.IO.Path.Combine(AppPaths.BaseDir, "THIRD-PARTY-NOTICES.txt"); break;
                             case "redeem": target = "https://www.minecraft.net/redeem"; break;
                             case "microsoft": target = "https://microsoft.com/devicelogin"; break;
                             case "registration": target = "https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade"; break;
                             default: throw new InvalidOperationException("不支持的打开目标");
                         }
-                        if (kind == "data" || kind == "logs")
+                        if (kind == "data" || kind == "logs" || kind == "notices")
                             Process.Start(new ProcessStartInfo("explorer.exe", "\"" + target + "\"") { UseShellExecute = true });
                         else
                             Process.Start(new ProcessStartInfo(target) { UseShellExecute = true });
@@ -796,6 +797,8 @@ namespace HalfMcLauncher
                         var request = payload as JObject ?? new JObject();
                         return DiagnosticsExport.Export(request.Value<string>("path"));
                     }
+
+                case "about.info": return About.Info();
 
                 case "task.cancel": return new JValue(Form.Launch.CancelTask(payload?.ToString()));
                 case "logs.export": return new JValue(false);
