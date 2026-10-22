@@ -800,6 +800,17 @@ namespace HalfMcLauncher
 
                 case "about.info": return About.Info();
 
+                case "context.instance":
+                    Form.LastInstanceId = payload is JObject contextRequest ? contextRequest.Value<string>("id") : payload?.ToString();
+                    return new JValue(true);
+
+                case "drop.handle":
+                    {
+                        var request = payload as JObject ?? new JObject();
+                        var paths = (request["paths"] as JArray)?.Values<string>() ?? Enumerable.Empty<string>();
+                        return DropImport.Handle(request.Value<string>("id"), paths);
+                    }
+
                 case "task.cancel": return new JValue(Form.Launch.CancelTask(payload?.ToString()));
                 case "logs.export": return new JValue(false);
 

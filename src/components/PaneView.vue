@@ -39,6 +39,7 @@ async function downloadJava(feature:number){javaBusy.value=true;javaStatus.value
 const searchPages=computed(()=>{const q=searchQuery.value.trim().toLowerCase();const ids:(Tab['page'])[]=['instances','resources','tasks','tools','settings','plugins'];return ids.map(id=>({id,...pages[id]})).filter(p=>!q||p.title.toLowerCase().includes(q)||p.sub.toLowerCase().includes(q))})
 const searchInstances=computed(()=>{const q=searchQuery.value.trim().toLowerCase();return data.instances.filter(i=>!q||i.name.toLowerCase().includes(q)||(i.loader||'').toLowerCase().includes(q)).slice(0,8)})
 const instanceTarget=computed(()=>{let id=props.tab.view.instanceId||'';if(!id){try{id=sessionStorage.getItem('half.instanceSettings')||''}catch{}}return data.instances.find(i=>i.id===id)||data.instances[0]||null});
+watch(()=>props.tab.view.instanceId,id=>{if(id)void api('context.instance',{id})},{immediate:true});
 const modsTarget=computed(()=>{let id='';try{id=sessionStorage.getItem('half.modsInstance')||''}catch{};return data.instances.find(i=>i.id===id)||data.instances[0]||null})
 function openInstanceSettings(i:Instance){props.tab.view.instanceId=i.id;emit('navigate','instance')}
 function openMods(i:Instance){try{sessionStorage.setItem('half.modsInstance',i.id)}catch{};emit('navigate','mods')}

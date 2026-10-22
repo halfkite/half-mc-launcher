@@ -106,7 +106,8 @@ onMounted(async()=>{
   api<any>('snapshot').then(snap=>{maximized.value=!!snap?.maximized;maybeLaunchStartup(snap)}).catch(()=>{})
   window.addEventListener('resize',measureNav)
   stopEvents=window.launcher?.onEvent(async event=>{
-    if(event.type==='snapshot'){applySnapshot(event.data);maximized.value=!!(event.data as any)?.maximized;maybeLaunchStartup(event.data)}
+    if(event.type==='dropResult'){const result=event.data as any;if(result?.message)toast(result.message)}
+      if(event.type==='snapshot'){applySnapshot(event.data);maximized.value=!!(event.data as any)?.maximized;maybeLaunchStartup(event.data)}
     if(event.type==='tasks')data.tasks=event.data
     if(event.type==='log'){data.logs.push(event.data);if(data.logs.length>1500)data.logs.splice(0,data.logs.length-1500)}
     if(event.type==='notice')toast(event.data)

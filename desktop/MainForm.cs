@@ -33,6 +33,7 @@ namespace HalfMcLauncher
             store = ConfigStore.Load();
             scan = InstanceScanner.Scan(store.State);
             launch = new LaunchService(store, (type, data) => SendEvent(type, data), () => BuildSnapshot());
+            ConfigureDrop();
 
             Text = "Half Mc Launcher";
             try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
@@ -107,6 +108,27 @@ namespace HalfMcLauncher
         internal ConfigStore Store { get { return store; } }
         internal LaunchService Launch { get { return launch; } }
 
+        internal string LastInstanceId { get; set; }
+
+        private void ConfigureDrop()
+        {
+            AllowDrop = true;
+            DragEnter += (sender, e) =>
+            {
+                if (e.Data.GetDataPresent(DataFormats.FileDrop)) e.Effect = DragDropEffects.Copy;
+            };
+            DragDrop += (sender, e) =>
+            {
+                if (!(e.Data.GetData(DataFormats.FileDrop) is string[] paths) || paths.Length == 0) return;
+                try
+                {
+                    var result = DropImport.Handle(LastInstanceId, paths);
+                    SendEvent("dropResult", result);
+                    if (result.Value<bool>("ok")) SendEvent("snapshot", BuildSnapshot());
+                }
+                catch (Exception error) { SendEvent("dropResult", new JObject { ["ok"] = false, ["message"] = error.Message }); }
+            };
+        }
         internal JObject BuildSnapshot()
         {
             var instances = new JArray();
