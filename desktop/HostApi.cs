@@ -811,6 +811,27 @@ namespace HalfMcLauncher
                         return DropImport.Handle(request.Value<string>("id"), paths);
                     }
 
+                case "updates.info": return Updates.Info();
+
+                case "updates.setSource":
+                    {
+                        var request = payload as JObject ?? new JObject();
+                        Updates.SetSource(request.Value<string>("url"));
+                        return Updates.Info();
+                    }
+
+                case "updates.check": return await Updates.CheckAsync(CancellationToken.None);
+
+                case "link.open":
+                    {
+                        var request = payload as JObject ?? new JObject();
+                        var url = request.Value<string>("url") ?? string.Empty;
+                        if (!Uri.TryCreate(url, UriKind.Absolute, out var target) || (target.Scheme != "http" && target.Scheme != "https"))
+                            throw new InvalidOperationException("只能打开 http 或 https 链接");
+                        Process.Start(new ProcessStartInfo(target.AbsoluteUri) { UseShellExecute = true });
+                        return new JValue(true);
+                    }
+
                 case "task.cancel": return new JValue(Form.Launch.CancelTask(payload?.ToString()));
                 case "logs.export": return new JValue(false);
 

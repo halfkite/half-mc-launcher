@@ -465,3 +465,5 @@ kbd{border:1px solid var(--line-soft);background:var(--raised);border-radius:5px
 .about-grid .wide b{flex:1}
 .about-chips{display:flex;flex-wrap:wrap;gap:6px}
 .about-chips span{font-size:9px;color:var(--muted);border:1px solid var(--line-soft);background:var(--panel);border-radius:999px;padding:4px 9px}
+
+.update-notes{white-space:pre-wrap;margin:6px 0 0;line-height:1.5}

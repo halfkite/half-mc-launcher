@@ -28,7 +28,8 @@ namespace HalfMcLauncher
                 ["exe"] = System.Windows.Forms.Application.ExecutablePath,
                 ["memoryMb"] = SystemMemory.TotalMegabytes(),
                 ["instances"] = instances,
-                ["notices"] = File.Exists(Path.Combine(AppPaths.BaseDir, "THIRD-PARTY-NOTICES.txt"))
+                ["notices"] = File.Exists(Path.Combine(AppPaths.BaseDir, "THIRD-PARTY-NOTICES.txt")),
+                ["updateUrl"] = Program.MainWindow?.Store.Settings.Value<string>("updateUrl") ?? string.Empty
             };
         }
     }

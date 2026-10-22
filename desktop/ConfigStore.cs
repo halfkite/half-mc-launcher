@@ -95,6 +95,7 @@ namespace HalfMcLauncher
                 ["glass"] = true,
                 ["memoryMode"] = "auto",
                 ["download"] = new JObject { ["source"] = "auto", ["threads"] = 4, ["retries"] = 2, ["timeout"] = 60 },
+                ["updateUrl"] = "",
                 ["javaRoots"] = new JArray()
             };
 
