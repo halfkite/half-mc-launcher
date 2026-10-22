@@ -169,3 +169,9 @@ html.reduce-motion body::before{animation:none}
 .sidebar.collapsed nav>button:hover::after{opacity:1;transform:translateY(-50%) translateX(0)}
 .side-account-chips{display:flex;gap:4px;align-items:center}
 .sidebar.collapsed .side-account-chips{position:absolute;left:calc(100% + 8px);bottom:0;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px;box-shadow:var(--depth-2);z-index:40}
+.sidebar{container-type:inline-size}
+.sidebar nav>button>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.search-shortcut span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@container (max-width:205px){.sidebar .nav-count,.sidebar .search-shortcut kbd{display:none}}
+.account-current small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.account-current b{white-space:nowrap}
