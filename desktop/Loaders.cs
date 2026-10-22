@@ -77,6 +77,32 @@ namespace HalfMcLauncher
                         }
                         break;
                     }
+                case "optifine":
+                    {
+                        var array = await GetJson("https://bmclapi2.bangbang93.com/optifine/" + Uri.EscapeDataString(minecraft), ct);
+                        foreach (var item in array as JArray ?? new JArray())
+                        {
+                            var type = item.Value<string>("type");
+                            var patch = item.Value<string>("patch");
+                            if (string.IsNullOrEmpty(type) || string.IsNullOrEmpty(patch)) continue;
+                            var version = type + "_" + patch;
+                            result.Add(Entry(version, !patch.ToLowerInvariant().Contains("pre"), false,
+                                string.IsNullOrEmpty(item.Value<string>("forge")) ? "独立安装" : "Forge " + item.Value<string>("forge"), "BMCLAPI"));
+                        }
+                        break;
+                    }
+                case "liteloader":
+                    {
+                        if (!System.Text.RegularExpressions.Regex.IsMatch(minecraft, "^1\\.(?:[5-9]|1[0-2])(?:\\.|$)")) break;
+                        var response = await GetJson("https://bmclapi2.bangbang93.com/liteloader/list?mcversion=" + Uri.EscapeDataString(minecraft), ct);
+                        var build = response["build"];
+                        if (build == null) break;
+                        var versionName = build.Value<string>("version");
+                        if (string.IsNullOrEmpty(versionName)) break;
+                        result.Add(Entry(versionName, response.Value<string>("type") != "SNAPSHOT", false,
+                            "旧版组件 · " + response.Value<string>("type"), "BMCLAPI"));
+                        break;
+                    }
             }
             return result;
         }

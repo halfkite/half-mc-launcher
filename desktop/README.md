@@ -26,7 +26,7 @@
 - **Java 检测**：PATH、`JAVA_HOME`、常见安装目录与用户搜索目录，`-XshowSettings:properties` 读取版本/架构
 - **启动游戏**：CmlLib.Core 构建启动参数（离线会话、内存、Java、natives），进程输出接入日志与任务中心，支持结束进程
 - **下载页**：Mojang 版本清单、原版安装、任务进度与取消
-- **加载器**：Fabric / Quilt / Forge / NeoForge 版本列表与安装（Forge/NeoForge 调用官方安装器，需要 Java）
+- **加载器**：Fabric / Quilt / Forge / NeoForge / OptiFine / LiteLoader 版本列表；安装支持前四种（Forge/NeoForge 调用官方安装器，需要 Java），OptiFine/LiteLoader 安装尚未接入
 - **资源下载**：Modrinth 与 CurseForge 搜索、版本列表、依赖解析、哈希校验安装；CurseForge 密钥用 DPAPI 加密保存
 - **Mod 管理**：读取 JAR 描述与图标、导入、启用/禁用、移到回收站
 - **目录选择**：Windows 现代 `IFileOpenDialog`（FOS_PICKFOLDERS），默认打开程序所在目录

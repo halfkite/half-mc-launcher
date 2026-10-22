@@ -39,7 +39,7 @@ namespace HalfMcLauncher
             Shown += async (sender, args) => await InitializeBrowserAsync();
             ApplyRememberedBounds();
             FormClosing += OnClosing;
-            launch.Log("Half Mc Launcher 0.1.0 已就绪");
+            launch.Log("Half Mc Launcher " + Program.Version + " 已就绪");
         }
 
         internal ConfigStore Store { get { return store; } }
@@ -61,7 +61,7 @@ namespace HalfMcLauncher
                 ["tasks"] = launch.TasksJson(),
                 ["logs"] = launch.LogsJson(),
                 ["dataPath"] = AppPaths.DataDir,
-                ["appVersion"] = "0.1.0",
+                ["appVersion"] = Program.Version,
                 ["memoryMb"] = SystemMemory.TotalMegabytes(),
                 ["scanWarnings"] = new JArray(scan.Warnings),
                 ["authConfigured"] = false,

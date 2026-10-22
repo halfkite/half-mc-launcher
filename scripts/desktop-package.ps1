@@ -30,13 +30,18 @@ try {
     Write-Warning ("仍有未嵌入的 DLL：" + (($leftovers | ForEach-Object Name) -join ', '))
   }
 
-  $target = Join-Path $root 'dist-desktop/Half-Mc-Launcher-0.1.0.exe'
+  # 版本号取自 csproj 的 <Version>，产物形如 Half-Mc-Launcher-0.1.0-r6.exe
+  [xml]$project = Get-Content (Join-Path $root 'desktop/HalfMcLauncher.csproj')
+  $version = @($project.Project.PropertyGroup.Version)[0]
+  if (-not $version) { $version = '0.1.0' }
+
+  $target = Join-Path $root ("dist-desktop/Half-Mc-Launcher-$version.exe")
   New-Item -ItemType Directory -Force (Split-Path $target) | Out-Null
   Remove-Item $target -Force -ErrorAction SilentlyContinue
   Copy-Item $exe $target
 
   Write-Host ''
-  Write-Host ("单文件 EXE：{0:N2} MB" -f ((Get-Item $target).Length / 1MB))
+  Write-Host ("单文件 EXE：{0:N2} MB（{1}）" -f ((Get-Item $target).Length / 1MB), $version)
   Write-Host ("输出：{0}" -f $target)
 }
 finally {

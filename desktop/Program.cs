@@ -14,6 +14,19 @@ namespace HalfMcLauncher
     {
         internal static MainForm MainWindow { get; private set; }
 
+        /// <summary>发行标记，形如 0.1.0-r6，取自程序集 InformationalVersion。</summary>
+        internal static string Version
+        {
+            get
+            {
+                var attribute = (System.Reflection.AssemblyInformationalVersionAttribute)Attribute.GetCustomAttribute(
+                    System.Reflection.Assembly.GetExecutingAssembly(), typeof(System.Reflection.AssemblyInformationalVersionAttribute));
+                var value = attribute?.InformationalVersion ?? "0.1.0";
+                var plus = value.IndexOf('+');
+                return plus > 0 ? value.Substring(0, plus) : value;
+            }
+        }
+
         [STAThread]
         private static int Main(string[] args)
         {
@@ -108,9 +121,16 @@ namespace HalfMcLauncher
 
             try
             {
-                var loaders = Loaders.ListAsync("1.21.1", "fabric", CancellationToken.None).GetAwaiter().GetResult();
-                lines.Add("fabric-loaders=" + loaders.Count);
-                if (loaders.Count == 0) ok = false;
+                foreach (var kind in new[] { "fabric", "quilt", "forge", "neoforge", "optifine", "liteloader" })
+                {
+                    try
+                    {
+                        var target = kind == "liteloader" ? "1.12.2" : "1.21.1";
+                        var list = Loaders.ListAsync(target, kind, CancellationToken.None).GetAwaiter().GetResult();
+                        lines.Add(kind + "-loaders=" + list.Count);
+                    }
+                    catch (Exception error) { ok = false; lines.Add(kind + "-loaders-error=" + error.Message); }
+                }
             }
             catch (Exception error) { ok = false; lines.Add("loader-error=" + error.Message); }
 
@@ -174,6 +194,7 @@ namespace HalfMcLauncher
             {
                 Bootstrap.ExtractNativeLoader();
                 Bootstrap.ExtractWebAssets();
+                report.Add("version=" + Version);
                 report.Add("native=" + File.Exists(Path.Combine(AppPaths.DataDir, "native", "WebView2Loader.dll")));
                 report.Add("web=" + File.Exists(Path.Combine(AppPaths.WebRoot, "index.html")));
                 report.Add("newtonsoft=" + (Type.GetType("Newtonsoft.Json.JsonConvert, Newtonsoft.Json") != null));

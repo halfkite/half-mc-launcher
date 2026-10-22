@@ -114,7 +114,7 @@ namespace HalfMcLauncher
                     MaximumRamMb = memory,
                     MinimumRamMb = Math.Min(512, memory),
                     GameLauncherName = "Half Mc Launcher",
-                    GameLauncherVersion = "0.1.0",
+                    GameLauncherVersion = Program.Version,
                     ScreenWidth = 1280,
                     ScreenHeight = 720,
                     FullScreen = false
