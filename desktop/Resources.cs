@@ -99,7 +99,8 @@ namespace HalfMcLauncher
                         ["summary"] = hit.Value<string>("description"),
                         ["downloads"] = hit.Value<long?>("downloads") ?? 0,
                         ["author"] = hit.Value<string>("author"),
-                        ["icon"] = hit.Value<string>("icon_url") ?? string.Empty
+                        ["icon"] = hit.Value<string>("icon_url") ?? string.Empty,
+                        ["versions"] = hit["versions"] as JArray ?? new JArray()
                     });
                 return new JObject { ["total"] = result.Value<int?>("total_hits") ?? projects.Count, ["projects"] = projects };
             }
@@ -123,7 +124,8 @@ namespace HalfMcLauncher
                     ["summary"] = entry.Value<string>("summary"),
                     ["downloads"] = entry.Value<long?>("downloadCount") ?? 0,
                     ["author"] = string.Join(", ", (entry["authors"] as JArray ?? new JArray()).Select(item => item.Value<string>("name"))),
-                    ["icon"] = entry["logo"]?.Value<string>("thumbnailUrl") ?? entry["logo"]?.Value<string>("url") ?? string.Empty
+                    ["icon"] = entry["logo"]?.Value<string>("thumbnailUrl") ?? entry["logo"]?.Value<string>("url") ?? string.Empty,
+                    ["versions"] = new JArray((entry["latestFilesIndexes"] as JArray ?? new JArray()).Select(item => item.Value<string>("gameVersion")).Where(item => !string.IsNullOrEmpty(item)).Distinct())
                 });
             return new JObject { ["total"] = curse["pagination"]?.Value<int?>("totalCount") ?? list.Count, ["projects"] = list };
         }

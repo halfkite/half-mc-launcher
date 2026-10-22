@@ -213,3 +213,16 @@ html.reduce-motion body::before{animation:none}
 .instance-body{flex:1;min-height:0;overflow:auto;padding:16px 0 24px}
 .instance-panel>footer{display:flex;justify-content:flex-end;gap:8px;padding:12px 0;border-top:1px solid var(--line-soft)}
 .path-text{word-break:break-all;padding:0 0 10px}
+
+.resource-result-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0}
+.view-toggle{display:flex;gap:2px;border:1px solid var(--line);border-radius:7px;padding:2px;flex:none}
+.view-toggle button{display:flex;align-items:center;gap:5px;padding:4px 8px;border-radius:5px;color:var(--muted);font-size:calc(9px * var(--font-scale,1))}
+.view-toggle button.active{background:var(--raised);color:var(--text)}
+.resource-versions{display:block;margin-top:2px;color:var(--faint);font-size:calc(9px * var(--font-scale,1))}
+.resource-result.compact{padding:7px 9px;gap:9px}
+.resource-result.compact .resource-icon{width:30px;height:30px;border-radius:7px}
+.resource-result.compact .resource-info{display:flex;align-items:center;gap:10px;min-width:0}
+.resource-result.compact .resource-summary,.resource-result.compact .resource-open,.resource-result.compact .resource-meta>small:not(.resource-versions){display:none}
+.resource-result.compact .resource-meta{margin:0}
+.resource-result.compact .resource-meta small{display:inline}
+.resource-result.compact .resource-versions{margin:0;color:var(--muted)}
