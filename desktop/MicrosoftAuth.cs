@@ -9,6 +9,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Win32;
 using Newtonsoft.Json.Linq;
 
 namespace HalfMcLauncher
@@ -179,7 +180,7 @@ namespace HalfMcLauncher
             LastCode = code;
             LastUrl = url;
             emit("deviceCode", new JObject { ["code"] = code, ["url"] = url, ["message"] = message });
-            if (!TryOpen(url)) emit("loginStage", new JObject { ["method"] = "device", ["stage"] = "浏览器未能自动打开，请手动访问 " + url });
+            if (!OpenInBrowser(url)) emit("loginStage", new JObject { ["method"] = "device", ["stage"] = "浏览器未能自动打开，请手动访问 " + url });
 
             var interval = Math.Max(2, start.Value<int?>("interval") ?? 5);
             var expires = DateTime.UtcNow.AddSeconds(start.Value<int?>("expires_in") ?? 900);
@@ -235,7 +236,7 @@ namespace HalfMcLauncher
                     + "&code_challenge_method=S256&prompt=select_account";
                 emit("loginStage", new JObject { ["method"] = "browser", ["stage"] = "请在浏览器完成授权，完成后会自动添加账户" });
                 LastUrl = url;
-                if (!TryOpen(url)) emit("loginStage", new JObject { ["method"] = "browser", ["stage"] = "浏览器未能自动打开，请手动访问 " + url });
+                if (!OpenInBrowser(url)) emit("loginStage", new JObject { ["method"] = "browser", ["stage"] = "浏览器未能自动打开，请手动访问 " + url });
 
                 string code;
                 try
@@ -461,31 +462,131 @@ namespace HalfMcLauncher
             return result;
         }
 
-        private static bool TryOpen(string url)
+        /// <summary>用系统默认浏览器打开链接：先按注册表里的默认浏览器命令直接启动，再退回 ShellExecute。</summary>
+        public static bool OpenInBrowser(string url)
         {
             if (string.IsNullOrEmpty(url)) return false;
+            // 以管理员身份运行时，浏览器以高完整性启动可能读不到自己的配置锁；
+            // 这时先交给 explorer 以普通权限打开，再由桌面按默认浏览器处理。
+            if (IsElevated())
+            {
+                if (OpenViaExplorer(url)) return true;
+                if (LaunchDefaultBrowser(url)) return true;
+            }
+            else
+            {
+                if (LaunchDefaultBrowser(url)) return true;
+                if (OpenViaExplorer(url)) return true;
+            }
             try
             {
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
-                Diagnostics.Write("auth open ok " + url);
+                Diagnostics.Write("auth open via shell " + url);
                 return true;
             }
-            catch (Exception error) { Diagnostics.Write("auth open failed: " + error.Message); }
-            try
-            {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", "\"" + url + "\"") { UseShellExecute = true });
-                Diagnostics.Write("auth open via explorer ok " + url);
-                return true;
-            }
-            catch (Exception error) { Diagnostics.Write("auth open via explorer failed: " + error.Message); }
+            catch (Exception error) { Diagnostics.Write("auth open via shell failed: " + error.Message); }
             try
             {
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("cmd.exe", "/c start \"\" \"" + url + "\"") { UseShellExecute = false, CreateNoWindow = true });
-                Diagnostics.Write("auth open via cmd ok " + url);
+                Diagnostics.Write("auth open via cmd " + url);
                 return true;
             }
             catch (Exception error) { Diagnostics.Write("auth open via cmd failed: " + error.Message); }
             return false;
+        }
+
+        private static bool OpenViaExplorer(string url)
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", "\"" + url + "\"") { UseShellExecute = true });
+                Diagnostics.Write("auth open via explorer " + url);
+                return true;
+            }
+            catch (Exception error)
+            {
+                Diagnostics.Write("auth open via explorer failed: " + error.Message);
+                return false;
+            }
+        }
+
+        private static bool IsElevated()
+        {
+            try
+            {
+                using (var identity = System.Security.Principal.WindowsIdentity.GetCurrent())
+                    return new System.Security.Principal.WindowsPrincipal(identity).IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+            }
+            catch { return false; }
+        }
+
+        private static bool LaunchDefaultBrowser(string url)
+        {
+            foreach (var scheme in new[] { "http", "https" })
+            {
+                string progId = null;
+                try
+                {
+                    progId = Registry.GetValue(@"HKEY_CURRENT_USER\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\" + scheme + @"\UserChoice", "ProgId", null) as string;
+                }
+                catch { }
+                if (string.IsNullOrEmpty(progId)) continue;
+                string command = null;
+                try { command = Registry.GetValue(@"HKEY_CLASSES_ROOT\" + progId + @"\shell\open\command", "", null) as string; }
+                catch { }
+                if (string.IsNullOrEmpty(command)) continue;
+                if (RunBrowserCommand(command, url))
+                {
+                    Diagnostics.Write("auth open ok (default browser " + progId + ") " + url);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private static bool RunBrowserCommand(string command, string url)
+        {
+            try
+            {
+                var expanded = Environment.ExpandEnvironmentVariables(command).Trim();
+                string exe, args;
+                if (expanded.StartsWith("\"", StringComparison.Ordinal))
+                {
+                    var end = expanded.IndexOf('"', 1);
+                    if (end < 0) return false;
+                    exe = expanded.Substring(1, end - 1);
+                    args = expanded.Substring(end + 1).Trim();
+                }
+                else
+                {
+                    var space = expanded.IndexOf(' ');
+                    exe = space < 0 ? expanded : expanded.Substring(0, space);
+                    args = space < 0 ? string.Empty : expanded.Substring(space + 1).Trim();
+                }
+                if (string.IsNullOrEmpty(exe) || !File.Exists(exe)) return false;
+                if (args.Contains("%1")) args = args.Replace("%1", "\"" + url + "\"");
+                else if (args.Contains("%L")) args = args.Replace("%L", "\"" + url + "\"");
+                else if (args.Contains("%*")) args = args.Replace("%*", "\"" + url + "\"");
+                else args = (args + " \"" + url + "\"").Trim();
+                var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exe, args) { UseShellExecute = false });
+                if (process == null) return false;
+                try
+                {
+                    // 浏览器已在运行时，入口进程会立刻以 0 退出；非 0 通常说明配置锁或权限失败。
+                    if (process.WaitForExit(1500) && process.ExitCode != 0)
+                    {
+                        Diagnostics.Write("default browser exited with " + process.ExitCode + ": " + exe);
+                        return false;
+                    }
+                }
+                catch { }
+                return true;
+            }
+            catch (Exception error)
+            {
+                Diagnostics.Write("default browser launch failed: " + error.Message);
+                return false;
+            }
         }
 
         private static string ErrorMessage(JObject reply)

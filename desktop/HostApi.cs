@@ -193,7 +193,7 @@ namespace HalfMcLauncher
                 case "account.reopen":
                     {
                         if (string.IsNullOrEmpty(MicrosoftAuth.LastUrl)) throw new InvalidOperationException("当前没有等待授权的登录");
-                        Process.Start(new ProcessStartInfo(MicrosoftAuth.LastUrl) { UseShellExecute = true });
+                        if (!MicrosoftAuth.OpenInBrowser(MicrosoftAuth.LastUrl)) throw new InvalidOperationException("无法启动默认浏览器，请改用「复制链接」手动打开");
                         return new JValue(true);
                     }
 
