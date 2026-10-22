@@ -622,6 +622,15 @@ namespace HalfMcLauncher
                 case "modpack.importPath":
                     return await Modpacks.ImportAsync(FindInstance(payload?.Value<string>("id")), payload.Value<string>("path"), message => Form.SendEvent("modpackProgress", message), CancellationToken.None);
 
+                case "java.install":
+                    {
+                        var feature = payload?.Value<int?>("feature") ?? 17;
+                        var installed = await JavaInstaller.InstallAsync(feature,
+                            (stage, percent) => Form.SendEvent("javaProgress", new JObject { ["stage"] = stage, ["percent"] = percent }),
+                            CancellationToken.None);
+                        return new JObject { ["installed"] = installed, ["java"] = await DetectJava() };
+                    }
+
                 case "task.cancel": return new JValue(Form.Launch.CancelTask(payload?.ToString()));
                 case "logs.export": return new JValue(false);
 

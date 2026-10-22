@@ -108,6 +108,7 @@ onMounted(async()=>{
     if(event.type==='tasks')data.tasks=event.data
     if(event.type==='log'){data.logs.push(event.data);if(data.logs.length>1500)data.logs.splice(0,data.logs.length-1500)}
     if(event.type==='notice')toast(event.data)
+    if(event.type==='javaProgress')window.dispatchEvent(new CustomEvent('half-java-progress',{detail:event.data}))
     if(event.type==='loginStage'){loginStage.value=event.data.stage}
     if(event.type==='deviceCode'){deviceCode.value=event.data;accountOpen.value=true}
     if(event.type==='loginFinished'){loginPending.value=false;deviceCode.value=null}

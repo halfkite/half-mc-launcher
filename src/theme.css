@@ -386,3 +386,4 @@ kbd{border:1px solid var(--line-soft);background:var(--raised);border-radius:5px
 .modpack-result{margin-top:16px;border:1px solid var(--line-soft);border-radius:12px;background:var(--panel);padding:14px}
 .modpack-result b{font-size:12px}
 .modpack-result p{color:var(--muted);font-size:10.5px;margin:4px 0 0}
+.java-download-row{margin:8px 0 6px;flex-wrap:wrap}
