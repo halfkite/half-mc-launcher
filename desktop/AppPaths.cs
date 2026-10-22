@@ -25,7 +25,7 @@ namespace HalfMcLauncher
                 ? Path.Combine(BaseDir, "data")
                 : Path.GetFullPath(overrideDir);
 
-            WebRoot = Path.Combine(BaseDir, "www");
+            WebRoot = Path.Combine(DataDir, "web");
 
             Directory.CreateDirectory(DataDir);
             Directory.CreateDirectory(LogDir);

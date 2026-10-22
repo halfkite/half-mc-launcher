@@ -32,14 +32,26 @@
 ## 构建与打包
 
 ```text
-npm run desktop        # 编译 C# 外壳并打包 dist-desktop/Half-Mc-Launcher-0.1.0-win-x64.zip
+npm run desktop        # 编译并输出单文件 dist-desktop/Half-Mc-Launcher-0.1.0.exe
 npm run desktop:test   # 运行实例扫描 / 配置读写 / Java 检测 / 启动参数构建的冒烟测试
 ```
 
 要求：Windows + .NET Framework 4.8（系统自带）+ WebView2 运行时；构建需要 .NET SDK 8 或更高，
 可用 `DOTNET_EXE` 指定 `dotnet.exe` 路径。
 
-当前产物：解压后 4.21 MB，zip 1.43 MB。
+当前产物：**单文件 2.14 MB**，没有附带 DLL。分发时只发这一个 exe，首次运行会在旁边生成 `data/`
+（配置、日志、WebView2 用户数据、解压出来的前端资源与 `WebView2Loader.dll`）。
+
+单文件是怎么来的：
+
+- 托管依赖（CmlLib、Newtonsoft.Json、System.Text.Json 等 22 个程序集）由 Costura.Fody 压缩后嵌入 exe，
+  运行时通过程序集解析钩子加载；
+- 前端 `dist/` 以 `web/...` 资源嵌入，启动时解压到 `data/web`，WebView2 用虚拟主机映射该目录；
+- `WebView2Loader.dll` 是原生 DLL，同样嵌入并在启动时解压到 `data/native`，先 `SetDllDirectory` 再加载；
+- DPI 感知改为程序内调用（原来依赖 `App.config`，单文件不再带 `.config`）。
+
+无界面自检：`"Half Mc Launcher.exe" --selftest`，结果写入 `data/selftest.txt`，用于确认真实发行包里
+资源与依赖都能解析（本次已验证：native/web/newtonsoft/cmllib/webview2 全部为 True）。
 
 冒烟测试支持两个可选环境变量：`HALF_TEST_JAVA` 指定真实的 java.exe，`HALF_TEST_MINECRAFT` 指定真实
 `.minecraft`（默认使用内置的合成版本描述，不触碰真实游戏目录）。
@@ -56,4 +68,3 @@ npm run desktop:test   # 运行实例扫描 / 配置读写 / Java 检测 / 启�
 2. 加载器安装：Fabric/Quilt 走 JSON profile，Forge/NeoForge 调用 installer jar，OptiFine 解包
 3. 资源下载：Modrinth / CurseForge
 4. 下载页：Mojang 版本清单与安装任务
-5. 单文件化（Costura 或 ILMerge）把 dll 收进 exe，进一步压缩到单文件约 2 MB

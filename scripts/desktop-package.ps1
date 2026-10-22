@@ -14,33 +14,30 @@ try {
     if ($LASTEXITCODE -ne 0) { throw '前端构建失败' }
   }
 
-  Write-Host "编译 C# 外壳（$Configuration）…"
+  Write-Host "编译 C# 外壳（$Configuration，单文件）…"
+  # 从干净的输出目录构建，确保 Costura 的嵌入与清理行为一致。
+  Remove-Item (Join-Path $root "desktop/bin/$Configuration") -Recurse -Force -ErrorAction SilentlyContinue
   & $dotnet build 'desktop/HalfMcLauncher.csproj' -c $Configuration --nologo
   if ($LASTEXITCODE -ne 0) { throw 'C# 外壳构建失败' }
 
   $out = Join-Path $root "desktop/bin/$Configuration/net48"
-  $stage = Join-Path $root 'dist-desktop/Half-Mc-Launcher'
-  $zip = Join-Path $root 'dist-desktop/Half-Mc-Launcher-0.1.0-win-x64.zip'
+  $exe = Join-Path $out 'Half Mc Launcher.exe'
+  if (-not (Test-Path $exe)) { throw "没有找到构建产物：$exe" }
 
-  Remove-Item $stage -Recurse -Force -ErrorAction SilentlyContinue
-  New-Item -ItemType Directory -Force $stage | Out-Null
-  Copy-Item (Join-Path $out '*.exe') $stage
-  Copy-Item (Join-Path $out '*.dll') $stage
-  Copy-Item (Join-Path $out '*.exe.config') $stage
-  Copy-Item (Join-Path $out 'www') $stage -Recurse
-  $loader = Join-Path $stage 'runtimes/win-x64/native'
-  New-Item -ItemType Directory -Force $loader | Out-Null
-  Copy-Item (Join-Path $out 'runtimes/win-x64/native/WebView2Loader.dll') $loader
+  # 单文件检查：除 exe/config/pdb 外不应再有 dll，否则说明 Costura 没有嵌入。
+  $leftovers = Get-ChildItem $out -File -Filter *.dll -ErrorAction SilentlyContinue
+  if ($leftovers) {
+    Write-Warning ("仍有未嵌入的 DLL：" + (($leftovers | ForEach-Object Name) -join ', '))
+  }
 
-  New-Item -ItemType Directory -Force (Split-Path $zip) | Out-Null
-  Remove-Item $zip -Force -ErrorAction SilentlyContinue
-  Compress-Archive -Path $stage -DestinationPath $zip -CompressionLevel Optimal
+  $target = Join-Path $root 'dist-desktop/Half-Mc-Launcher-0.1.0.exe'
+  New-Item -ItemType Directory -Force (Split-Path $target) | Out-Null
+  Remove-Item $target -Force -ErrorAction SilentlyContinue
+  Copy-Item $exe $target
 
-  $folderSize = (Get-ChildItem $stage -Recurse -File | Measure-Object Length -Sum).Sum
-  $zipSize = (Get-Item $zip).Length
   Write-Host ''
-  Write-Host ("解压后：{0:N2} MB    zip：{1:N2} MB" -f ($folderSize / 1MB), ($zipSize / 1MB))
-  Write-Host ("输出：{0}" -f $zip)
+  Write-Host ("单文件 EXE：{0:N2} MB" -f ((Get-Item $target).Length / 1MB))
+  Write-Host ("输出：{0}" -f $target)
 }
 finally {
   Pop-Location
