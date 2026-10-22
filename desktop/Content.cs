@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using ICSharpCode.SharpZipLib.Zip;
 using Microsoft.VisualBasic.FileIO;
 using Newtonsoft.Json.Linq;
@@ -69,7 +70,7 @@ namespace HalfMcLauncher
                     var info = new FileInfo(file);
                     if ((info.Attributes & FileAttributes.ReparsePoint) != 0) continue;
                     var enabled = !info.Name.EndsWith(".disabled", StringComparison.OrdinalIgnoreCase);
-                    list.Add(new JObject
+                    var entry = new JObject
                     {
                         ["file"] = info.Name,
                         ["name"] = Display(info.Name),
@@ -78,7 +79,10 @@ namespace HalfMcLauncher
                         ["kind"] = kind,
                         ["directory"] = false,
                         ["enabled"] = enabled
-                    });
+                    };
+                    if (kind == "resourcepacks" || kind == "shaderpacks")
+                        foreach (var field in PackMeta(file, false).Properties()) entry[field.Name] = field.Value.DeepClone();
+                    list.Add(entry);
                 }
                 if (kind != "screenshots")
                 {
@@ -86,7 +90,7 @@ namespace HalfMcLauncher
                     {
                         var info = new DirectoryInfo(folder);
                         if ((info.Attributes & FileAttributes.ReparsePoint) != 0) continue;
-                        list.Add(new JObject
+                        var entry = new JObject
                         {
                             ["file"] = info.Name,
                             ["name"] = info.Name,
@@ -95,7 +99,10 @@ namespace HalfMcLauncher
                             ["kind"] = kind,
                             ["directory"] = true,
                             ["enabled"] = true
-                        });
+                        };
+                        if (kind == "resourcepacks" || kind == "shaderpacks")
+                            foreach (var field in PackMeta(folder, true).Properties()) entry[field.Name] = field.Value.DeepClone();
+                        list.Add(entry);
                     }
                 }
             }
@@ -182,6 +189,60 @@ namespace HalfMcLauncher
 
         private static string BackupDirectory(JObject instance) => Path.Combine(instance.Value<string>("gameDir"), "backups");
 
+        private static string PackDescription(JToken token)
+        {
+            if (token == null) return string.Empty;
+            if (token.Type == JTokenType.String) return System.Text.RegularExpressions.Regex.Replace(token.ToString(), "§.", string.Empty).Trim();
+            var text = token.Value<string>("text") ?? string.Empty;
+            foreach (var extra in token["extra"] as JArray ?? new JArray()) text += " " + PackDescription(extra);
+            return System.Text.RegularExpressions.Regex.Replace(text, "§.", string.Empty).Trim();
+        }
+
+        private static JObject PackMeta(string path, bool directory)
+        {
+            var result = new JObject();
+            try
+            {
+                string json = null;
+                byte[] icon = null;
+                if (directory)
+                {
+                    var meta = Path.Combine(path, "pack.mcmeta");
+                    if (File.Exists(meta)) json = File.ReadAllText(meta);
+                    var png = Path.Combine(path, "pack.png");
+                    if (File.Exists(png) && new FileInfo(png).Length < 262144) icon = File.ReadAllBytes(png);
+                }
+                else
+                {
+                    using (var zip = new ZipFile(File.OpenRead(path)))
+                    {
+                        var entry = zip.GetEntry("pack.mcmeta");
+                        if (entry != null && entry.Size < 131072)
+                            using (var input = zip.GetInputStream(entry))
+                            using (var reader = new StreamReader(input, Encoding.UTF8))
+                                json = reader.ReadToEnd();
+                        var png = zip.GetEntry("pack.png");
+                        if (png != null && png.Size < 262144)
+                            using (var input = zip.GetInputStream(png))
+                            using (var memory = new MemoryStream())
+                            {
+                                input.CopyTo(memory);
+                                icon = memory.ToArray();
+                            }
+                    }
+                }
+                if (!string.IsNullOrEmpty(json))
+                {
+                    var meta = JObject.Parse(json);
+                    var pack = meta["pack"] as JObject ?? meta;
+                    result["description"] = PackDescription(pack["description"]);
+                    result["packFormat"] = pack.Value<int?>("pack_format") ?? pack.Value<int?>("packFormat") ?? 0;
+                }
+                if (icon != null) result["icon"] = "data:image/png;base64," + Convert.ToBase64String(icon);
+            }
+            catch { }
+            return result;
+        }
         public static JObject Thumb(JObject instance, string file, int maxSize)
         {
             var directory = Folder(instance, "screenshots");

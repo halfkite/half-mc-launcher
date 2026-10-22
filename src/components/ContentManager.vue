@@ -5,7 +5,7 @@ import type { ContentKind } from '../../shared/resources'
 import { api, busy } from '../store'
 import Icon from './Icon.vue'
 const props=defineProps<{instance:Instance;kind:ContentKind}>()
-type Row={file:string;name:string;size:number;modified:string;enabled:boolean;directory:boolean;kind:ContentKind;version?:string;lastPlayed?:string;gameType?:number;hardcore?:boolean;icon?:string}
+type Row={file:string;name:string;size:number;modified:string;enabled:boolean;directory:boolean;kind:ContentKind;version?:string;lastPlayed?:string;gameType?:number;hardcore?:boolean;icon?:string;description?:string;packFormat?:number}
 type Backup={file:string;size:number;modified:string}
 const items=ref<Row[]>([]),backups=ref<Backup[]>([]),loading=ref(false),error=ref('')
 const thumbs=ref<Record<string,string>>({}),viewer=ref<Row|null>(null),viewerData=ref('')
@@ -59,8 +59,8 @@ watch(()=>[props.instance.id,props.kind],load)
     <template v-else>
       <p v-if="!items.length" class="field-hint content-empty">{{emptyText}}</p>
       <div v-for="row in items" :key="row.file" class="content-row">
-        <img v-if="kind==='saves'&&row.icon" class="save-icon" :src="row.icon" alt=""/><span v-else class="content-icon"><Icon :name="kind==='saves'?'save':kind==='shaderpacks'?'sparkles':'layers'" :size="16"/></span>
-        <div class="content-main"><b>{{row.name}}</b><small v-if="kind==='saves'">{{row.version||'未知版本'}} · {{mode(row.gameType)}}<template v-if="row.hardcore"> · 极限</template> · {{row.lastPlayed?date(row.lastPlayed):date(row.modified)}} · {{size(row.size)}}</small><small v-else>{{size(row.size)}} · {{date(row.modified)}}</small></div>
+        <img v-if="(kind==='saves'||kind==='resourcepacks'||kind==='shaderpacks')&&row.icon" class="save-icon" :src="row.icon" alt=""/><span v-else class="content-icon"><Icon :name="kind==='saves'?'save':kind==='shaderpacks'?'sparkles':'layers'" :size="16"/></span>
+        <div class="content-main"><b>{{row.name}}</b><small v-if="kind==='saves'">{{row.version||'未知版本'}} · {{mode(row.gameType)}}<template v-if="row.hardcore"> · 极限</template> · {{row.lastPlayed?date(row.lastPlayed):date(row.modified)}} · {{size(row.size)}}</small><small v-else-if="kind==='resourcepacks'||kind==='shaderpacks'">{{row.description||'无描述'}}<template v-if="row.packFormat"> · 格式 {{row.packFormat}}</template> · {{size(row.size)}}</small><small v-else>{{size(row.size)}} · {{date(row.modified)}}</small></div>
         <div class="content-actions">
           <button v-if="kind!=='saves'" class="button compact" :disabled="loading||busy.has('content')" @click="toggle(row)">{{row.enabled?'禁用':'启用'}}</button>
           <button v-if="kind==='saves'" class="button compact" :disabled="loading" @click="backup(row)">备份</button>
