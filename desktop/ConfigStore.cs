@@ -84,8 +84,8 @@ namespace HalfMcLauncher
         {
             var settings = new JObject
             {
-                ["theme"] = "dark",
-                ["accent"] = "#a7df8b",
+                ["theme"] = "light",
+                ["accent"] = "#74b5ff",
                 ["memory"] = 4096,
                 ["java"] = "",
                 ["clientId"] = "",

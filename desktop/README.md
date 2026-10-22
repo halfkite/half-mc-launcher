@@ -25,9 +25,13 @@
 - 设置/外观/工作区/预设保存、目录登记与移除、离线账户（标准 OfflinePlayer UUID）、打开目录与网页
 - **Java 检测**：PATH、`JAVA_HOME`、常见安装目录与用户搜索目录，`-XshowSettings:properties` 读取版本/架构
 - **启动游戏**：CmlLib.Core 构建启动参数（离线会话、内存、Java、natives），进程输出接入日志与任务中心，支持结束进程
+- **下载页**：Mojang 版本清单（`versions`）、原版安装到程序目录下的 `minecraft/`，任务中心显示进度、支持取消
+- **目录选择**：使用 Windows 现代 `IFileOpenDialog`（FOS_PICKFOLDERS），默认打开程序所在目录，替代在高 DPI 下会崩溃的旧式 FolderBrowserDialog
+- 未处理异常写入 `data/logs/crash.log` 并提示，不再让窗口直接消失
+- 默认主题为浅色 + 淡蓝（`#74b5ff`），与 Electron 版一致
 - 未接入的方法返回空数据或明确提示，而不是让界面崩溃
 
-尚未接入（后续阶段）：加载器安装、资源下载、微软登录、Mod 管理、插件、版本清单页。
+尚未接入（后续阶段）：加载器安装（Fabric/Forge/NeoForge/Quilt/OptiFine）、资源下载、微软登录、Mod 管理、插件。
 
 ## 构建与打包
 

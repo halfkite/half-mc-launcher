@@ -58,8 +58,8 @@ namespace HalfMcLauncher
             {
                 ["state"] = store.State,
                 ["instances"] = instances,
-                ["tasks"] = new JArray(launch.Tasks),
-                ["logs"] = new JArray(launch.Logs),
+                ["tasks"] = launch.TasksJson(),
+                ["logs"] = launch.LogsJson(),
                 ["dataPath"] = AppPaths.DataDir,
                 ["appVersion"] = "0.1.0",
                 ["memoryMb"] = SystemMemory.TotalMegabytes(),

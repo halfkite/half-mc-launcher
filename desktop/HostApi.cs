@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -56,25 +57,24 @@ namespace HalfMcLauncher
 
                 case "source.add":
                     {
-                        using (var dialog = new FolderBrowserDialog { Description = "选择 Minecraft 目录、versions 文件夹，或包含多个游戏目录的容器" })
+                        var picked = FolderPicker.Pick(Form.Handle, "选择 Minecraft 目录、versions 文件夹，或包含多个游戏目录的容器", AppPaths.BaseDir);
+                        if (string.IsNullOrWhiteSpace(picked)) return JValue.CreateNull();
+                        var directory = InstanceScanner.canonical(picked);
+                        var sources = Store.State["sources"] as JArray ?? new JArray();
+                        if (sources.Any(item => string.Equals(item.Value<string>("path"), directory, StringComparison.OrdinalIgnoreCase)))
+                            throw new InvalidOperationException("此目录已经添加");
+                        // 目录扫描失败不应阻断登记：把提示留到 snapshot 的 scanWarnings 里。
+                        try { InstanceScanner.FindRoots(directory); } catch { }
+                        sources.Add(new JObject
                         {
-                            if (dialog.ShowDialog(Form) != DialogResult.OK) return JValue.CreateNull();
-                            var directory = InstanceScanner.canonical(dialog.SelectedPath);
-                            var sources = Store.State["sources"] as JArray ?? new JArray();
-                            if (sources.Any(item => string.Equals(item.Value<string>("path"), directory, StringComparison.OrdinalIgnoreCase)))
-                                throw new InvalidOperationException("此目录已经添加");
-                            InstanceScanner.FindRoots(directory);
-                            sources.Add(new JObject
-                            {
-                                ["id"] = Guid.NewGuid().ToString(),
-                                ["path"] = directory,
-                                ["label"] = Path.GetFileName(directory).Length > 0 ? Path.GetFileName(directory) : directory
-                            });
-                            Store.State["sources"] = sources;
-                            Store.Save();
-                            Form.Rescan();
-                            return Form.BuildSnapshot();
-                        }
+                            ["id"] = Guid.NewGuid().ToString(),
+                            ["path"] = directory,
+                            ["label"] = Path.GetFileName(directory).Length > 0 ? Path.GetFileName(directory) : directory
+                        });
+                        Store.State["sources"] = sources;
+                        Store.Save();
+                        Form.Rescan();
+                        return Form.BuildSnapshot();
                     }
 
                 case "source.remove":
@@ -230,22 +230,20 @@ namespace HalfMcLauncher
 
                 case "java.addFolder":
                     {
-                        using (var dialog = new FolderBrowserDialog { Description = "选择 Java 所在目录（扫描最多 5 层）" })
+                        var picked = FolderPicker.Pick(Form.Handle, "选择 Java 所在目录（扫描最多 5 层）", AppPaths.BaseDir);
+                        if (string.IsNullOrWhiteSpace(picked)) return JValue.CreateNull();
+                        var settings = Store.Settings;
+                        var roots = settings["javaRoots"] as JArray ?? new JArray();
+                        var directory = InstanceScanner.canonical(picked);
+                        if (!roots.Any(item => string.Equals(item.ToString(), directory, StringComparison.OrdinalIgnoreCase)))
                         {
-                            if (dialog.ShowDialog(Form) != DialogResult.OK) return JValue.CreateNull();
-                            var settings = Store.Settings;
-                            var roots = settings["javaRoots"] as JArray ?? new JArray();
-                            var directory = InstanceScanner.canonical(dialog.SelectedPath);
-                            if (!roots.Any(item => string.Equals(item.ToString(), directory, StringComparison.OrdinalIgnoreCase)))
-                            {
-                                if (roots.Count >= 30) throw new InvalidOperationException("最多添加 30 个 Java 搜索目录");
-                                roots.Add(directory);
-                                settings["javaRoots"] = roots;
-                                Store.Save();
-                                Form.SendEvent("snapshot", Form.BuildSnapshot());
-                            }
-                            return await DetectJava();
+                            if (roots.Count >= 30) throw new InvalidOperationException("最多添加 30 个 Java 搜索目录");
+                            roots.Add(directory);
+                            settings["javaRoots"] = roots;
+                            Store.Save();
+                            Form.SendEvent("snapshot", Form.BuildSnapshot());
                         }
+                        return await DetectJava();
                     }
 
                 case "java.removeFolder":
@@ -279,11 +277,31 @@ namespace HalfMcLauncher
                     }
 
                 // 以下页面尚未接入：返回空数据，界面显示空状态而不是报错。
-                case "versions": return new JArray();
+                case "versions": return await VersionsAsync();
+
+                case "install":
+                    {
+                        var version = payload?.Value<string>("version")?.Trim();
+                        var loader = payload?.Value<string>("loader") ?? "vanilla";
+                        if (string.IsNullOrEmpty(version)) throw new InvalidOperationException("请选择游戏版本");
+                        if (loader != "vanilla")
+                            throw new NotSupportedException("当前构建只支持原版安装，Fabric/Forge 等加载器在下一阶段接入");
+                        var root = Path.Combine(AppPaths.BaseDir, "minecraft");
+                        Directory.CreateDirectory(Path.Combine(root, "versions"));
+                        var sources = Store.State["sources"] as JArray ?? new JArray();
+                        if (!sources.Any(item => string.Equals(item.Value<string>("path"), root, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            sources.Add(new JObject { ["id"] = Guid.NewGuid().ToString(), ["path"] = root, ["label"] = "便携游戏目录" });
+                            Store.State["sources"] = sources;
+                            Store.Save();
+                            Form.Rescan();
+                        }
+                        return new JValue(Form.Launch.StartInstall(version, root));
+                    }
                 case "loaders.list": return new JArray();
                 case "plugins.list": return new JArray();
                 case "mods.list": return new JArray();
-                case "task.cancel": return new JValue(true);
+                case "task.cancel": return new JValue(Form.Launch.CancelTask(payload?.ToString()));
                 case "resource.configure": return new JValue(false);
                 case "logs.export": return new JValue(false);
 
@@ -299,6 +317,30 @@ namespace HalfMcLauncher
                 default:
                     throw new NotSupportedException("当前是 C# 重构预览版，此功能尚未接入：" + method);
             }
+        }
+
+        private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
+        private static JArray versionCache;
+
+        /// <summary>Mojang 官方版本清单（下载页的“游戏源”）。</summary>
+        private static async Task<JToken> VersionsAsync()
+        {
+            if (versionCache != null) return versionCache;
+            var text = await Http.GetStringAsync("https://piston-meta.mojang.com/mc/game/version_manifest_v2.json");
+            var root = JObject.Parse(text);
+            var list = new JArray();
+            foreach (var version in root["versions"] as JArray ?? new JArray())
+            {
+                list.Add(new JObject
+                {
+                    ["id"] = version.Value<string>("id"),
+                    ["type"] = version.Value<string>("type"),
+                    ["releaseTime"] = version.Value<string>("releaseTime"),
+                    ["url"] = version.Value<string>("url")
+                });
+            }
+            versionCache = list;
+            return list;
         }
 
         private static Task<JToken> DetectJava()

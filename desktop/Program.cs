@@ -17,16 +17,58 @@ namespace HalfMcLauncher
 
             if (args != null && args.Any(item => string.Equals(item, "--selftest", StringComparison.OrdinalIgnoreCase)))
                 return SelfTest();
+            if (args != null && args.Any(item => string.Equals(item, "--check-versions", StringComparison.OrdinalIgnoreCase)))
+                return CheckVersions();
 
             Bootstrap.EnableDpiAwareness();
             Bootstrap.ExtractNativeLoader();
             Bootstrap.ExtractWebAssets();
+
+            // 任何未处理异常都写日志并提示，而不是让窗口直接消失。
+            Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
+            Application.ThreadException += (sender, e) => Report(e.Exception);
+            AppDomain.CurrentDomain.UnhandledException += (sender, e) => Report(e.ExceptionObject as Exception);
 
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             MainWindow = new MainForm();
             Application.Run(MainWindow);
             return 0;
+        }
+
+        private static void Report(Exception error)
+        {
+            if (error == null) return;
+            try
+            {
+                Directory.CreateDirectory(AppPaths.LogDir);
+                File.AppendAllText(Path.Combine(AppPaths.LogDir, "crash.log"),
+                    DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " " + error + Environment.NewLine);
+            }
+            catch { }
+            try
+            {
+                MessageBox.Show("发生错误：" + error.Message + "\n\n详细信息已写入 data/logs/crash.log", "Half Mc Launcher",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch { }
+        }
+
+        /// <summary>下载页“游戏源”自检：取 Mojang 版本清单并记录数量。</summary>
+        private static int CheckVersions()
+        {
+            try
+            {
+                var list = (Newtonsoft.Json.Linq.JArray)HostApi.HandleAsync("versions", null).GetAwaiter().GetResult();
+                File.WriteAllText(Path.Combine(AppPaths.DataDir, "versions-check.txt"),
+                    "versions=" + list.Count + Environment.NewLine + "latest=" + list.FirstOrDefault()?["id"]);
+                return list.Count > 0 ? 0 : 1;
+            }
+            catch (Exception error)
+            {
+                File.WriteAllText(Path.Combine(AppPaths.DataDir, "versions-check.txt"), "error=" + error);
+                return 1;
+            }
         }
 
         /// <summary>

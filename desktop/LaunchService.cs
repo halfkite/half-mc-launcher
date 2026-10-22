@@ -25,6 +25,8 @@ namespace HalfMcLauncher
         private readonly Action<string, object> emit;
         private readonly Func<JObject> snapshot;
         private readonly Dictionary<string, Process> running = new Dictionary<string, Process>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, CancellationTokenSource> installs = new Dictionary<string, CancellationTokenSource>(StringComparer.Ordinal);
+        private readonly object gate = new object();
 
         public LaunchService(ConfigStore store, Action<string, object> emit, Func<JObject> snapshot)
         {
@@ -35,6 +37,17 @@ namespace HalfMcLauncher
 
         public List<JObject> Tasks { get; } = new List<JObject>();
         public List<JObject> Logs { get; } = new List<JObject>();
+
+        /// <summary>线程安全的快照副本，避免后台安装与界面读取互相踩踏。</summary>
+        public JArray TasksJson()
+        {
+            lock (gate) return new JArray(Tasks.Select(item => item.DeepClone()));
+        }
+
+        public JArray LogsJson()
+        {
+            lock (gate) return new JArray(Logs.Select(item => item.DeepClone()));
+        }
 
         public bool IsRunning(string id)
         {
@@ -51,8 +64,11 @@ namespace HalfMcLauncher
                 ["text"] = redacted,
                 ["instanceId"] = instanceId
             };
-            Logs.Add(entry);
-            if (Logs.Count > 1500) Logs.RemoveRange(0, Logs.Count - 1500);
+            lock (gate)
+            {
+                Logs.Add(entry);
+                if (Logs.Count > 1500) Logs.RemoveRange(0, Logs.Count - 1500);
+            }
             emit("log", entry);
         }
 
@@ -240,9 +256,12 @@ namespace HalfMcLauncher
                 ["createdAt"] = DateTime.UtcNow.ToString("o"),
                 ["instanceId"] = instanceId
             };
-            Tasks.Add(task);
-            if (Tasks.Count > 200) Tasks.RemoveRange(0, Tasks.Count - 200);
-            emit("tasks", Tasks);
+            lock (gate)
+            {
+                Tasks.Add(task);
+                if (Tasks.Count > 200) Tasks.RemoveRange(0, Tasks.Count - 200);
+            }
+            emit("tasks", TasksJson());
             return task;
         }
 
@@ -251,7 +270,55 @@ namespace HalfMcLauncher
             task["status"] = status;
             task["progress"] = progress;
             task["detail"] = detail;
-            emit("tasks", Tasks);
+            emit("tasks", TasksJson());
+        }
+
+        /// <summary>下载并安装原版到指定根目录，返回任务 ID。进度通过 tasks 事件推给界面。</summary>
+        public string StartInstall(string version, string root)
+        {
+            var task = AddTask("安装 " + version, null);
+            var taskId = task.Value<string>("id");
+            var cts = new CancellationTokenSource();
+            installs[taskId] = cts;
+            Task.Run(async () =>
+            {
+                try
+                {
+                    UpdateTask(task, "running", 5, "准备下载文件");
+                    Log("开始安装 " + version + " 到 " + root);
+                    var path = new MinecraftPath(root);
+                    path.CreateDirs();
+                    var launcher = new MinecraftLauncher(MinecraftLauncherParameters.CreateDefault(path));
+                    await launcher.InstallAsync(version, cts.Token);
+                    UpdateTask(task, "success", 100, "安装完成");
+                    Log("安装完成：" + version);
+                    emit("snapshot", snapshot());
+                }
+                catch (OperationCanceledException)
+                {
+                    UpdateTask(task, "cancelled", 100, "已取消");
+                    Log("安装已取消：" + version, "error");
+                }
+                catch (Exception error)
+                {
+                    UpdateTask(task, "error", 100, error.Message);
+                    Log("安装失败：" + error.Message, "error");
+                }
+                finally
+                {
+                    installs.Remove(taskId);
+                    cts.Dispose();
+                }
+            });
+            return taskId;
+        }
+
+        public bool CancelTask(string id)
+        {
+            CancellationTokenSource cts;
+            if (string.IsNullOrEmpty(id) || !installs.TryGetValue(id, out cts)) return false;
+            cts.Cancel();
+            return true;
         }
     }
 }

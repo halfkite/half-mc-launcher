@@ -12,9 +12,6 @@ namespace HalfMcLauncher
     internal static class Bootstrap
     {
         [DllImport("user32.dll")]
-        private static extern bool SetProcessDpiAwarenessContext(IntPtr value);
-
-        [DllImport("user32.dll")]
         private static extern bool SetProcessDPIAware();
 
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
@@ -23,12 +20,11 @@ namespace HalfMcLauncher
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         private static extern IntPtr LoadLibrary(string path);
 
-        private static readonly IntPtr PerMonitorAwareV2 = new IntPtr(-4);
-
         public static void EnableDpiAwareness()
         {
-            try { if (SetProcessDpiAwarenessContext(PerMonitorAwareV2)) return; }
-            catch { }
+            // .NET Framework 4.8 的 WinForms 在没有 App.config 时按系统 DPI 工作。
+            // 单文件版不带 .config，因此显式声明系统级 DPI，避免按显示器 DPI 与
+            // 原生文件夹对话框混用时崩溃或错位。
             try { SetProcessDPIAware(); } catch { }
         }
 
