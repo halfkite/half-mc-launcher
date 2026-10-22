@@ -33,7 +33,15 @@ namespace HalfMcLauncher
             var directory = Path.Combine(AppPaths.DataDir, "native");
             Directory.CreateDirectory(directory);
             var target = Path.Combine(directory, "WebView2Loader.dll");
-            Extract("native/WebView2Loader.dll", target);
+            try
+            {
+                Extract("native/WebView2Loader.dll", target);
+            }
+            catch (IOException)
+            {
+                // 已有一个实例在运行时会锁住这个 DLL，直接复用现有文件。
+                Diagnostics.Write("native loader locked, reuse existing");
+            }
             if (File.Exists(target))
             {
                 SetDllDirectory(directory);
@@ -52,7 +60,8 @@ namespace HalfMcLauncher
                 var relative = name.Substring(4).Replace('\\', '/');
                 if (relative.Length == 0) continue;
                 var target = Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar));
-                Extract(name, target);
+                try { Extract(name, target); }
+                catch (IOException) { Diagnostics.Write("web asset locked, skip " + relative); }
             }
         }
 
