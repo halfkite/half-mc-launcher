@@ -39,8 +39,13 @@
 .nav-switch button.active{background:var(--green-bg);color:var(--green)}
 .nav-switch i{position:relative;display:block;width:14px;height:12px;border:1px solid currentColor;border-radius:2px}
 .nav-switch i::before{content:"";position:absolute;background:currentColor;border-radius:1px}
+.nav-switch i::after{content:"";position:absolute;background:currentColor;border-radius:1px;opacity:.28}
 .nav-switch .top i::before{left:1px;right:1px;top:1px;height:3px}
 .nav-switch .side i::before{top:1px;bottom:1px;left:1px;width:3px}
+.nav-switch .top i::after{top:1px;bottom:1px;left:1px;width:3px}
+.nav-switch .side i::after{left:1px;right:1px;top:1px;height:3px}
+.account-avatar{image-rendering:pixelated}
+.account-avatar img{image-rendering:pixelated}
 .sidebar-layout{padding:4px 10px 8px;display:flex;flex-direction:column;gap:6px}
 .sidebar-layout .layout-picker{flex-wrap:wrap;gap:4px}
 .sidebar-layout .layout-picker button:not(.selected){width:27px;margin-left:4px;padding:0;opacity:1;visibility:visible;pointer-events:auto;border-width:1px}
