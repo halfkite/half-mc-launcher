@@ -483,6 +483,28 @@ namespace HalfMcLauncher
                         return Mods.List(instance);
                     }
 
+                case "mods.reveal":
+                    {
+                        var instance = FindInstance(payload?.Value<string>("id"));
+                        Mods.Reveal(instance, payload.Value<string>("file"));
+                        return new JValue(true);
+                    }
+
+                case "mods.batch":
+                    {
+                        var instance = FindInstance(payload?.Value<string>("id"));
+                        var action = payload.Value<string>("action") ?? string.Empty;
+                        var files = (payload["files"] as JArray)?.Select(item => item.ToString()).ToList() ?? new List<string>();
+                        if (files.Count == 0) return JValue.CreateNull();
+                        if (action == "delete")
+                        {
+                            var confirm = MessageBox.Show(Form, "将选中的 " + files.Count + " 个模组移至回收站？", "批量删除模组",
+                                MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
+                            if (confirm != DialogResult.OK) return JValue.CreateNull();
+                        }
+                        return Mods.Batch(instance, action, files);
+                    }
+
                 case "mods.delete":
                     {
                         var instance = FindInstance(payload?.Value<string>("id"));

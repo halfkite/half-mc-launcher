@@ -28,6 +28,7 @@ namespace HalfMcLauncher
             public string Name;
             public string Version;
             public List<string> Ids = new List<string>();
+            public List<string> Depends = new List<string>();
             public string IconPath;
         }
 
@@ -78,6 +79,11 @@ namespace HalfMcLauncher
                     info.Ids = blocks.Select(block => Regex.Match(block, "^\\s*modId\\s*=\\s*[\"']([^\"']+)", RegexOptions.Multiline).Groups[1].Value)
                         .Where(id => !string.IsNullOrEmpty(id)).ToList();
                     info.IconPath = Regex.Match(first, "^\\s*logoFile\\s*=\\s*[\"']([^\"']+)", RegexOptions.Multiline).Groups[1].Value;
+                    foreach (Match dependency in Regex.Matches(text, @"\[\[dependencies\.[^\]]+\]\]([\s\S]*?)(?=\n\s*\[|\z)"))
+                    {
+                        var dependencyId = Regex.Match(dependency.Groups[1].Value, "modId\\s*=\\s*[\"']([^\"']+)").Groups[1].Value;
+                        if (!string.IsNullOrEmpty(dependencyId)) info.Depends.Add(dependencyId);
+                    }
                 }
                 else
                 {
@@ -89,6 +95,14 @@ namespace HalfMcLauncher
                     if (!string.IsNullOrEmpty(id)) info.Ids.Add(id);
                     var icon = entry.Name == "quilt.mod.json" ? meta?["metadata"]?["icon"] : json["icon"];
                     info.IconPath = IconValue(icon);
+                    var depends = meta?["depends"] as JObject;
+                    if (depends != null) foreach (var property in depends.Properties()) info.Depends.Add(property.Name);
+                    if (meta?["depends"] is JArray dependencyArray)
+                        foreach (var item in dependencyArray)
+                        {
+                            if (item.Type == JTokenType.String) info.Depends.Add(item.ToString());
+                            else if (item is JObject obj && obj.Value<string>("id") != null) info.Depends.Add(obj.Value<string>("id"));
+                        }
                 }
                 info.Name = (info.Name ?? string.Empty).Substring(0, Math.Min(200, (info.Name ?? string.Empty).Length));
                 info.Version = (info.Version ?? string.Empty).Substring(0, Math.Min(100, (info.Version ?? string.Empty).Length));
@@ -151,6 +165,10 @@ namespace HalfMcLauncher
             var directory = Path.Combine(instance.Value<string>("gameDir"), "mods");
             var result = new JArray();
             if (!Directory.Exists(directory)) return result;
+            var rows = new List<Tuple<JObject, ModInfo>>();
+            var namesById = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var builtin = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "minecraft", "java", "fabricloader", "forge", "neoforge", "quilt_loader" };
+
             foreach (var file in Directory.EnumerateFiles(directory).Where(name => Regex.IsMatch(Path.GetFileName(name), "\\.jar(?:\\.disabled)?$", RegexOptions.IgnoreCase)))
             {
                 var info = new FileInfo(file);
@@ -160,18 +178,41 @@ namespace HalfMcLauncher
                 try { meta = Metadata(file); }
                 catch (Exception error) { issue = "无法读取模组信息：" + error.Message; }
                 var icon = Icon(file, meta, file + ":" + info.Length + ":" + info.LastWriteTimeUtc.Ticks);
-                result.Add(new JObject
+                var name = string.IsNullOrEmpty(meta.Name) ? Regex.Replace(info.Name, "\\.jar(?:\\.disabled)?$", "", RegexOptions.IgnoreCase) : meta.Name;
+                var row = new JObject
                 {
                     ["file"] = info.Name,
-                    ["name"] = string.IsNullOrEmpty(meta.Name) ? Regex.Replace(info.Name, "\\.jar(?:\\.disabled)?$", "", RegexOptions.IgnoreCase) : meta.Name,
+                    ["name"] = name,
                     ["version"] = meta.Version ?? string.Empty,
                     ["enabled"] = !info.Name.EndsWith(".disabled", StringComparison.OrdinalIgnoreCase),
                     ["size"] = info.Length,
                     ["issue"] = issue,
-                    ["icon"] = icon
-                });
+                    ["icon"] = icon,
+                    ["ids"] = new JArray(meta.Ids)
+                };
+                rows.Add(Tuple.Create(row, meta));
+                foreach (var id in meta.Ids) if (!namesById.ContainsKey(id)) namesById[id] = name;
             }
-            var sorted = result.OrderBy(item => item.Value<string>("name"), StringComparer.Create(System.Globalization.CultureInfo.GetCultureInfo("zh-CN"), true)).ToList();
+
+            foreach (var row in rows)
+            {
+                var links = new JArray();
+                foreach (var dependency in row.Item2.Depends.Distinct(StringComparer.OrdinalIgnoreCase))
+                {
+                    if (builtin.Contains(dependency)) continue;
+                    var dependencyName = namesById.TryGetValue(dependency, out var resolved) ? resolved : dependency;
+                    links.Add(new JObject { ["id"] = dependency, ["name"] = dependencyName, ["kind"] = "depends", ["missing"] = !namesById.ContainsKey(dependency) });
+                }
+                foreach (var other in rows)
+                {
+                    if (ReferenceEquals(other, row)) continue;
+                    if (!other.Item2.Depends.Any(dep => row.Item2.Ids.Contains(dep, StringComparer.OrdinalIgnoreCase))) continue;
+                    links.Add(new JObject { ["id"] = other.Item1.Value<string>("file"), ["name"] = other.Item1.Value<string>("name"), ["kind"] = "usedBy" });
+                }
+                row.Item1["links"] = links;
+            }
+
+            var sorted = rows.Select(row => row.Item1).OrderBy(item => item.Value<string>("name"), StringComparer.Create(System.Globalization.CultureInfo.GetCultureInfo("zh-CN"), true)).ToList();
             return new JArray(sorted);
         }
 
@@ -239,6 +280,24 @@ namespace HalfMcLauncher
             }
         }
 
+        public static void Reveal(JObject instance, string file)
+        {
+            var target = ModPath(instance, file);
+            if (!File.Exists(target)) throw new InvalidOperationException("文件不存在：" + file);
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", "/select,\"" + target + "\"") { UseShellExecute = true });
+        }
+
+        public static JArray Batch(JObject instance, string action, IEnumerable<string> files)
+        {
+            foreach (var file in files)
+            {
+                var enabled = !file.EndsWith(".disabled", StringComparison.OrdinalIgnoreCase);
+                if (action == "enable" && !enabled) Toggle(instance, file);
+                else if (action == "disable" && enabled) Toggle(instance, file);
+                else if (action == "delete") Delete(instance, file);
+            }
+            return List(instance);
+        }
         public static void Delete(JObject instance, string file)
         {
             var target = ModPath(instance, file);
