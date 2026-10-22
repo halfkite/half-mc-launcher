@@ -15,12 +15,13 @@ import { memoryBudget } from '../shared/memory'
 import { Tasks } from '../electron/tasks'
 import { instanceOptionsSchema } from '../shared/model'
 import type { Instance } from '../shared/model'
-import { importMods,listMods,toggleMod,modPath,safeFilename,modMetadata } from '../electron/mods'
+import { importMods,listMods,toggleMod,modPath,safeFilename,modMetadata,modIcon } from '../electron/mods'
 const require=createRequire(import.meta.url),{ZipFile}=require('yazl')
 const dirs:string[]=[]
 const temp=async()=>{const d=await mkdtemp(path.join(os.tmpdir(),'hakf-features-'));dirs.push(d);return d}
 afterEach(async()=>{vi.restoreAllMocks();vi.unstubAllGlobals();vi.mocked(requestJson).mockReset();for(const d of dirs.splice(0))await rm(d,{recursive:true,force:true})})
 async function jar(id='sample',version='1.0'){const zip=new ZipFile();zip.addBuffer(Buffer.from(JSON.stringify({id,name:id,version})),'fabric.mod.json');zip.end();const bytes:Buffer[]=[];for await(const b of zip.outputStream)bytes.push(b);return Buffer.concat(bytes)}
+async function archive(entries:[string,Buffer][]){const zip=new ZipFile();for(const [name,data] of entries)zip.addBuffer(data,name);zip.end();const bytes:Buffer[]=[];for await(const b of zip.outputStream)bytes.push(b);return Buffer.concat(bytes)}
 async function fixture(){const root=await temp(),gameDir=path.join(root,'versions','fabric');await mkdir(gameDir,{recursive:true});const instance:Instance={...instanceOptionsSchema.parse({name:'测试',group:'',favorite:false,memory:4096,java:'',isolated:true}),id:'fixture',sourceId:'fixture',root,gameDir,version:'fabric',minecraft:'1.21.1',loader:'Fabric'};return instance}
 function remote(id:string,bytes:Buffer,deps:any[]=[]){return {id,project_id:id,name:id,game_versions:['1.21.1'],loaders:['fabric'],files:[{filename:`${id}.jar`,url:`https://cdn.modrinth.com/${id}.jar`,size:bytes.length,hashes:{sha512:createHash('sha512').update(bytes).digest('hex')}}],dependencies:deps}}
 async function service(i:Instance){const tasks=new Tasks(()=>{},()=>{}),resources=new Resources(i.root,tasks);return {tasks,resources}}
@@ -34,6 +35,26 @@ describe('instance mod files',()=>{
   it('does not mistake Forge dependency IDs for provided mod IDs',async()=>{const i=await fixture(),zip=new ZipFile();zip.addBuffer(Buffer.from('modLoader="javafml"\n[[mods]]\nmodId="own_mod"\nversion="1.0"\ndisplayName="Own Mod"\n[[dependencies.own_mod]]\nmodId="minecraft"\n'), 'META-INF/mods.toml');zip.end();const chunks:Buffer[]=[];for await(const b of zip.outputStream)chunks.push(b);const file=path.join(i.root,'forge.jar');await writeFile(file,Buffer.concat(chunks));expect(await modMetadata(file)).toEqual({name:'Own Mod',version:'1.0',ids:['own_mod']})})
   it('imports and toggles valid mods while preserving filenames and rejecting collisions',async()=>{const i=await fixture(),input=path.join(i.root,'sample.jar');await writeFile(input,await jar());await importMods(i,[input]);expect(await listMods(i)).toMatchObject([{file:'sample.jar',name:'sample',enabled:true,version:'1.0'}]);await toggleMod(i,'sample.jar');expect((await listMods(i))[0].enabled).toBe(false);await toggleMod(i,'sample.jar.disabled');await expect(importMods(i,[input])).rejects.toThrow('同名');await writeFile(path.join(i.gameDir,'mods','sample.jar.disabled'),await jar('other'));await expect(toggleMod(i,'sample.jar')).rejects.toThrow();expect((await listMods(i)).length).toBe(2);await expect(modPath(i,'../sample.jar')).rejects.toThrow();expect(()=>safeFilename('CON.jar')).toThrow()})
   it('shows corrupt file errors without hiding other mods and refuses corrupt imports',async()=>{const i=await fixture();await mkdir(path.join(i.gameDir,'mods'));await writeFile(path.join(i.gameDir,'mods','bad.jar'),'broken');await writeFile(path.join(i.root,'bad.jar'),'broken');expect((await listMods(i))[0].issue).toContain('无法读取');await expect(importMods(i,[path.join(i.root,'bad.jar')])).rejects.toThrow()})
+  it('reads mod icons from Fabric metadata, Forge logoFile and the assets fallback',async()=>{
+    const i=await fixture(),png=Buffer.from('89504e470d0a1a0a','hex')
+    const fabric=path.join(i.root,'fabric-icon.jar')
+    await writeFile(fabric,await archive([['fabric.mod.json',Buffer.from(JSON.stringify({id:'iconmod',name:'Icon Mod',version:'1.0',icon:'icon.png'}))],['icon.png',png]]))
+    expect(await modMetadata(fabric)).toMatchObject({name:'Icon Mod',iconPath:'icon.png'})
+    expect(await modIcon(fabric,'icon.png','iconmod')).toMatch(/^data:image\/png;base64,/)
+
+    const forge=path.join(i.root,'forge-icon.jar')
+    await writeFile(forge,await archive([['META-INF/mods.toml',Buffer.from('modLoader="javafml"\n[[mods]]\nmodId="own_mod"\ndisplayName="Own Mod"\nlogoFile="assets/own_mod/icon.png"\n')],['assets/own_mod/icon.png',png]]))
+    expect(await modMetadata(forge)).toMatchObject({iconPath:'assets/own_mod/icon.png'})
+    expect(await modIcon(forge,'assets/own_mod/icon.png','own_mod')).toMatch(/^data:image\/png;base64,/)
+
+    const fallback=path.join(i.root,'fallback-icon.jar')
+    await writeFile(fallback,await archive([['META-INF/mods.toml',Buffer.from('[[mods]]\nmodId="plain_mod"\ndisplayName="Plain"\n')],['assets/plain_mod/icon.png',png]]))
+    expect(await modIcon(fallback,undefined,'plain_mod')).toMatch(/^data:image\/png;base64,/)
+
+    await mkdir(path.join(i.gameDir,'mods'),{recursive:true})
+    await writeFile(path.join(i.gameDir,'mods','fabric-icon.jar'),await readFile(fabric))
+    expect((await listMods(i))[0].icon).toMatch(/^data:image\/png;base64,/)
+  })
 })
 describe('resource transactions',()=>{
   it('resolves required dependencies and installs verified files into the selected instance',async()=>{const i=await fixture(),main=await jar('main'),dep=await jar('dep'),versions={main:remote('main',main,[{dependency_type:'required',project_id:'dep',version_id:'dep'}]),dep:remote('dep',dep)};vi.mocked(requestJson).mockImplementation(async(url:any)=>versions[String(url).split('/').pop() as keyof typeof versions] as any);vi.stubGlobal('fetch',vi.fn(async(url:string)=>new Response(url.includes('main')?main:dep)));const {resources,tasks}=await service(i);expect((await resources.plan(selected,i)).map(v=>v.id)).toEqual(['dep','main']);resources.install(selected,i);await vi.waitFor(()=>expect(tasks.entries[0].status).toBe('success'));expect((await listMods(i)).map(f=>f.name)).toEqual(['dep','main']);expect((await readdir(path.join(i.gameDir,'mods'))).some(f=>f.endsWith('.part'))).toBe(false)})

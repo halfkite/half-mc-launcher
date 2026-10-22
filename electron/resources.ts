@@ -40,12 +40,12 @@ export class Resources {
       const facets=[[`project_type:${q.kind}`]];if(q.game)facets.push([`versions:${q.game}`]);if(q.loader&&q.kind==='mod')facets.push([`categories:${q.loader}`])
       const params=new URLSearchParams({query:q.query,facets:JSON.stringify(facets),limit:'20',offset:String(q.offset),index:q.query?'relevance':'downloads'})
       const result=await requestJson<any>('https://api.modrinth.com/v2/search?'+params)
-      return {total:result.total_hits,projects:result.hits.map((p:any)=>({id:p.project_id,source:'modrinth',name:p.title,summary:p.description,downloads:p.downloads,author:p.author}))}
+      return {total:result.total_hits,projects:result.hits.map((p:any)=>({id:p.project_id,source:'modrinth',name:p.title,summary:p.description,downloads:p.downloads,author:p.author,icon:p.icon_url||''}))}
     }
     const params=new URLSearchParams({gameId:'432',classId:String(classes[q.kind]),searchFilter:q.query,pageSize:'20',index:String(q.offset),sortField:'6',sortOrder:'desc'})
     if(q.game)params.set('gameVersion',q.game);if(q.loader&&q.kind==='mod'&&cfLoaders[q.loader])params.set('modLoaderType',String(cfLoaders[q.loader]))
     const result=await this.cf('mods/search?'+params)
-    return {total:result.pagination.totalCount,projects:result.data.map((p:any)=>({id:String(p.id),source:'curseforge',name:p.name,summary:p.summary,downloads:p.downloadCount,author:p.authors.map((a:any)=>a.name).join(', ')}))}
+    return {total:result.pagination.totalCount,projects:result.data.map((p:any)=>({id:String(p.id),source:'curseforge',name:p.name,summary:p.summary,downloads:p.downloadCount,author:p.authors.map((a:any)=>a.name).join(', '),icon:p.logo?.thumbnailUrl||p.logo?.url||''}))}
   }
   private mrVersion(v:any,kind:ResourceKind):ResourceVersion {
     const f=v.files?.find((f:any)=>f.primary)||v.files?.[0]

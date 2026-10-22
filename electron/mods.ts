@@ -18,7 +18,9 @@ export function safeFilename(file:string) {
   if(!file||file.length>200||file!==path.basename(file)||/[<>:"/\\|?*\x00-\x1f]/.test(file)||/[. ]$/.test(file)||/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(file))throw new Error('资源文件名无效')
   return file
 }
-export async function modMetadata(file:string):Promise<{name?:string;version?:string;ids?:string[]}> {
+const iconValue=(value:any):string|undefined=>typeof value==='string'?value:Array.isArray(value)?value.find(item=>typeof item==='string'):value&&typeof value==='object'?Object.values(value).find(item=>typeof item==='string') as string|undefined:undefined
+const iconCache=new Map<string,string|undefined>()
+export async function modMetadata(file:string):Promise<{name?:string;version?:string;ids?:string[];iconPath?:string}> {
   const zip=await open(file,{lazyEntries:true,autoClose:false})
   try {
     const names=['fabric.mod.json','quilt.mod.json','META-INF/neoforge.mods.toml','META-INF/mods.toml','mcmod.info']
@@ -31,11 +33,31 @@ export async function modMetadata(file:string):Promise<{name?:string;version?:st
     if(index===2||index===3){
       // Only [[mods]] declares provided IDs; dependency tables also contain modId.
       const mods=text.split(/^\s*\[\[mods\]\]\s*$/m).slice(1).map(block=>block.split(/^\s*\[/m)[0])
-      return {name:/^\s*displayName\s*=\s*["']([^"']+)/m.exec(mods[0]||'')?.[1],version:/^\s*version\s*=\s*["']([^"']+)/m.exec(mods[0]||'')?.[1],ids:mods.map(block=>/^\s*modId\s*=\s*["']([^"']+)/m.exec(block)?.[1]).filter((id):id is string=>!!id)}
+      return {name:/^\s*displayName\s*=\s*["']([^"']+)/m.exec(mods[0]||'')?.[1],version:/^\s*version\s*=\s*["']([^"']+)/m.exec(mods[0]||'')?.[1],ids:mods.map(block=>/^\s*modId\s*=\s*["']([^"']+)/m.exec(block)?.[1]).filter((id):id is string=>!!id),iconPath:/^\s*logoFile\s*=\s*["']([^"']+)/m.exec(mods[0]||'')?.[1]}
     }
     const json=JSON.parse(text),meta=index===1?json.quilt_loader:index===4?json[0]||json:json
-    return {name:String(meta?.metadata?.name||meta?.name||meta?.id||'').slice(0,200),version:String(meta?.version||'').slice(0,100),ids:[meta?.id||meta?.modid].filter(Boolean)}
+    return {name:String(meta?.metadata?.name||meta?.name||meta?.id||'').slice(0,200),version:String(meta?.version||'').slice(0,100),ids:[meta?.id||meta?.modid].filter(Boolean),iconPath:iconValue(index===1?meta?.metadata?.icon:json.icon)}
   } finally {zip.close()}
+}
+const iconMime=(name:string)=>{const ext=path.extname(name).slice(1).toLowerCase();return ext==='jpg'||ext==='jpeg'?'image/jpeg':ext==='gif'?'image/gif':ext==='webp'?'image/webp':'image/png'}
+/** 从 JAR 里读取模组图标（Fabric/Quilt 的 icon、Forge/NeoForge 的 logoFile，或 assets/<modid>/icon.png）。 */
+export async function modIcon(file:string,iconPath:string|undefined,modId:string|undefined,cacheKey?:string):Promise<string|undefined> {
+  if(cacheKey&&iconCache.has(cacheKey))return iconCache.get(cacheKey)
+  const candidates=[iconPath,modId&&`assets/${modId}/icon.png`,'pack.png'].filter((value):value is string=>!!value)
+  let result:string|undefined
+  if(candidates.length){
+    const zip=await open(file,{lazyEntries:true,autoClose:false})
+    try {
+      const entries=await filterEntries(zip,Array.from(new Set(candidates)))
+      const entry=entries.find((value):value is NonNullable<typeof value>=>!!value)
+      if(entry&&entry.uncompressedSize<=524288){
+        const data=await readEntry(zip,entry)
+        result=`data:${iconMime(entry.fileName)};base64,${data.toString('base64')}`
+      }
+    } finally {zip.close()}
+  }
+  if(cacheKey)iconCache.set(cacheKey,result)
+  return result
 }
 export async function listMods(instance:Instance):Promise<ModFile[]> {
   const dir=path.join(instance.gameDir,'mods')
@@ -45,9 +67,11 @@ export async function listMods(instance:Instance):Promise<ModFile[]> {
   for(const entry of entries.filter(e=>e.isFile()&&/\.jar(?:\.disabled)?$/i.test(e.name))){
     const file=path.join(dir,entry.name),info=await lstat(file)
     if(info.isSymbolicLink())continue
-    let meta:{name?:string;version?:string}={},issue:string|undefined
+    let meta:{name?:string;version?:string;ids?:string[];iconPath?:string}={},issue:string|undefined
     try {meta=await modMetadata(file)}catch(e:any){issue=`无法读取模组信息：${e.message}`}
-    files.push({file:entry.name,name:meta.name||entry.name.replace(/\.jar(?:\.disabled)?$/i,''),version:meta.version||'',enabled:!entry.name.toLowerCase().endsWith('.disabled'),size:info.size,issue})
+    let icon:string|undefined
+    try {icon=await modIcon(file,meta.iconPath,meta.ids?.[0],`${file}:${info.size}:${info.mtimeMs}`)}catch{}
+    files.push({file:entry.name,name:meta.name||entry.name.replace(/\.jar(?:\.disabled)?$/i,''),version:meta.version||'',enabled:!entry.name.toLowerCase().endsWith('.disabled'),size:info.size,issue,icon})
   }
   return files.sort((a,b)=>a.name.localeCompare(b.name,'zh-CN',{numeric:true}))
 }
