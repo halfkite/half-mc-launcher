@@ -199,9 +199,44 @@ namespace HalfMcLauncher
         {
             var target = ModPath(instance, file);
             var next = file.EndsWith(".disabled", StringComparison.OrdinalIgnoreCase) ? target.Substring(0, target.Length - 9) : target + ".disabled";
-            File.Copy(target, next);
-            try { File.Delete(target); }
-            catch { try { File.Delete(next); } catch { } throw; }
+            var directory = Path.GetDirectoryName(target);
+            try
+            {
+                var probe = Path.Combine(directory, ".half-write-probe");
+                File.WriteAllText(probe, string.Empty);
+                File.Delete(probe);
+            }
+            catch (Exception error)
+            {
+                Diagnostics.Write("mods.write probe failed: " + error.Message + " => " + directory);
+                throw new InvalidOperationException("mods 目录不可写，请检查文件夹权限或以管理员身份运行启动器：" + directory, error);
+            }
+            try
+            {
+                if (File.Exists(next))
+                {
+                    File.SetAttributes(next, FileAttributes.Normal);
+                    File.Delete(next);
+                }
+                if ((File.GetAttributes(target) & FileAttributes.ReadOnly) != 0)
+                    File.SetAttributes(target, FileAttributes.Normal);
+                File.Move(target, next);
+            }
+            catch (Exception error) when (error is UnauthorizedAccessException || error is IOException)
+            {
+                Diagnostics.Write("mods.toggle move failed: " + error.GetType().Name + ": " + error.Message + " => " + target);
+                try
+                {
+                    File.Copy(target, next, true);
+                    File.SetAttributes(next, FileAttributes.Normal);
+                    File.Delete(target);
+                }
+                catch (Exception fallback)
+                {
+                    Diagnostics.Write("mods.toggle copy fallback failed: " + fallback.Message);
+                    throw new InvalidOperationException("无法修改模组文件，请确认 mods 目录可写、文件没有被其他程序占用：" + target, fallback);
+                }
+            }
         }
 
         public static void Delete(JObject instance, string file)
