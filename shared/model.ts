@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const pageIds = ['instances', 'install', 'resources', 'tasks', 'tools', 'settings', 'plugins', 'search', 'mods', 'instance', 'content', 'logs', 'servers'] as const
+export const pageIds = ['instances', 'install', 'resources', 'tasks', 'tools', 'settings', 'plugins', 'search', 'mods', 'instance', 'content', 'logs', 'servers', 'skin'] as const
 export type PageId = typeof pageIds[number]
 export const layoutIds = ['single', 'columns', 'rows', 'left-wide', 'right-wide', 'quad'] as const
 export type LayoutId = typeof layoutIds[number]

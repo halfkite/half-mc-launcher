@@ -698,6 +698,18 @@ namespace HalfMcLauncher
                         return new JValue(true);
                     }
 
+                case "screenshots.thumb":
+                    {
+                        var request = payload as JObject ?? new JObject();
+                        return Content.Thumb(FindInstance(request.Value<string>("id")), request.Value<string>("file"), request.Value<int?>("max") ?? 360);
+                    }
+
+                case "screenshots.image":
+                    {
+                        var request = payload as JObject ?? new JObject();
+                        return Content.Image(FindInstance(request.Value<string>("id")), request.Value<string>("file"));
+                    }
+
                 case "task.cancel": return new JValue(Form.Launch.CancelTask(payload?.ToString()));
                 case "logs.export": return new JValue(false);
 

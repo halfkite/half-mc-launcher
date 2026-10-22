@@ -180,6 +180,55 @@ namespace HalfMcLauncher
 
         private static string BackupDirectory(JObject instance) => Path.Combine(instance.Value<string>("gameDir"), "backups");
 
+        public static JObject Thumb(JObject instance, string file, int maxSize)
+        {
+            var directory = Folder(instance, "screenshots");
+            var path = Path.Combine(directory, Mods.SafeFilename(file));
+            if (!File.Exists(path)) throw new InvalidOperationException("截图不存在");
+            if (new FileInfo(path).Length > 40L * 1024 * 1024) throw new InvalidOperationException("截图过大");
+            using (var image = System.Drawing.Image.FromFile(path))
+            {
+                var scale = Math.Min(1.0, (double)maxSize / Math.Max(image.Width, image.Height));
+                var width = Math.Max(1, (int)(image.Width * scale));
+                var height = Math.Max(1, (int)(image.Height * scale));
+                using (var bitmap = new System.Drawing.Bitmap(width, height))
+                using (var graphics = System.Drawing.Graphics.FromImage(bitmap))
+                {
+                    graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                    graphics.DrawImage(image, 0, 0, width, height);
+                    using (var memory = new MemoryStream())
+                    {
+                        var encoder = System.Drawing.Imaging.ImageCodecInfo.GetImageEncoders().First(item => item.FormatID == System.Drawing.Imaging.ImageFormat.Jpeg.Guid);
+                        using (var parameters = new System.Drawing.Imaging.EncoderParameters(1))
+                        {
+                            parameters.Param[0] = new System.Drawing.Imaging.EncoderParameter(System.Drawing.Imaging.Encoder.Quality, 82L);
+                            bitmap.Save(memory, encoder, parameters);
+                        }
+                        return new JObject
+                        {
+                            ["data"] = "data:image/jpeg;base64," + Convert.ToBase64String(memory.ToArray()),
+                            ["width"] = width,
+                            ["height"] = height
+                        };
+                    }
+                }
+            }
+        }
+
+        public static JObject Image(JObject instance, string file)
+        {
+            var directory = Folder(instance, "screenshots");
+            var path = Path.Combine(directory, Mods.SafeFilename(file));
+            if (!File.Exists(path)) throw new InvalidOperationException("截图不存在");
+            var info = new FileInfo(path);
+            if (info.Length > 12L * 1024 * 1024) throw new InvalidOperationException("截图过大，无法预览");
+            var mime = path.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ? "image/png" : "image/jpeg";
+            return new JObject
+            {
+                ["data"] = "data:" + mime + ";base64," + Convert.ToBase64String(File.ReadAllBytes(path)),
+                ["name"] = info.Name
+            };
+        }
         public static JArray Backups(JObject instance)
         {
             var directory = BackupDirectory(instance);
