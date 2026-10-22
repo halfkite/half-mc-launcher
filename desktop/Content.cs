@@ -47,7 +47,7 @@ namespace HalfMcLauncher
                 {
                     var info = new DirectoryInfo(save);
                     if ((info.Attributes & FileAttributes.ReparsePoint) != 0) continue;
-                    list.Add(new JObject
+                    var entry = new JObject
                     {
                         ["file"] = info.Name,
                         ["name"] = info.Name,
@@ -56,7 +56,9 @@ namespace HalfMcLauncher
                         ["kind"] = kind,
                         ["directory"] = true,
                         ["enabled"] = true
-                    });
+                    };
+                    foreach (var field in SaveInfo.Read(save).Properties()) entry[field.Name] = field.Value.DeepClone();
+                    list.Add(entry);
                 }
             }
             else
