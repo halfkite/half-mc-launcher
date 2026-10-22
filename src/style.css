@@ -119,3 +119,6 @@ html.glass body::before{content:"";position:fixed;inset:-18%;z-index:-1;pointer-
 html.glass:not([data-theme=light]) body::before{background:radial-gradient(38% 34% at 22% 28%,#1f5f8f 0%,transparent 62%),radial-gradient(36% 32% at 80% 30%,#1f7a4a 0%,transparent 62%),radial-gradient(40% 40% at 55% 82%,#5a2f70 0%,transparent 64%);opacity:.95}
 @keyframes auroraDrift{0%{transform:translate3d(-3%,-2%,0) scale(1)}50%{transform:translate3d(3%,2%,0) scale(1.08)}100%{transform:translate3d(-3%,-2%,0) scale(1)}}
 html.reduce-motion body::before{animation:none}
+.sticky-actions{position:sticky;bottom:12px;z-index:6;width:fit-content;margin:22px 0 4px auto;padding:13px 15px;border-radius:14px;background:color-mix(in srgb,var(--panel) 84%,transparent);border:1px solid var(--line);box-shadow:var(--depth-2);backdrop-filter:blur(18px) saturate(1.25)}
+.sticky-actions .button{box-shadow:0 6px 16px -8px #356b2c99}
+.setting-row>.range{width:clamp(180px,32vw,340px);max-width:none;flex:0 0 auto;margin-left:auto}
