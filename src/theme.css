@@ -338,3 +338,40 @@ kbd{border:1px solid var(--line-soft);background:var(--raised);border-radius:5px
 .content-actions{display:flex;gap:4px;flex:none;flex-wrap:wrap;justify-content:flex-end}
 .content-subtitle{margin:22px 0 6px;font-size:12px;font-weight:600}
 .content-empty{padding:20px 0}
+/* ---------- 日志与崩溃 ---------- */
+.logs-page{height:100%;min-height:0}
+.logs-layout{display:flex;gap:14px;height:100%;min-height:0}
+.logs-list{width:236px;flex:none;border-right:1px solid var(--line-soft);padding-right:12px;overflow:auto}
+.logs-list-head{display:flex;align-items:center;justify-content:space-between;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-bottom:8px}
+.logs-item{display:flex;gap:8px;align-items:flex-start;width:100%;padding:8px;border-radius:8px;text-align:left;color:var(--muted)}
+.logs-item:hover{background:var(--hover);color:var(--text)}
+.logs-item.active{background:var(--raised);color:var(--text)}
+.logs-item b{display:block;font-size:10.5px;font-weight:550;word-break:break-all}
+.logs-item small{color:var(--faint);font-size:9px}
+.logs-body{flex:1;min-width:0;display:flex;flex-direction:column;min-height:0}
+.logs-toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;border-bottom:1px solid var(--line-soft);padding-bottom:10px;margin-bottom:12px}
+.logs-toolbar small{display:block;color:var(--faint);font-size:9px;margin-top:2px}
+.logs-summary{background:var(--green-bg);border-radius:9px;padding:10px 12px;margin-bottom:12px;display:flex;gap:10px;font-size:11px;line-height:1.5}
+.logs-summary b{color:var(--green);flex:none}
+.logs-findings{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;overflow:auto;max-height:46%}
+.finding{border:1px solid var(--line-soft);border-left:3px solid var(--green);border-radius:10px;padding:10px 12px;background:var(--panel)}
+.finding.error{border-left-color:var(--red)}
+.finding-head{display:flex;gap:7px;align-items:center;color:var(--muted);margin-bottom:4px}
+.finding-head svg{color:var(--green)}
+.finding.error .finding-head svg{color:var(--red)}
+.finding p{margin:2px 0 6px;color:var(--faint);font-size:10.5px;line-height:1.55}
+.finding code{display:block;font-family:ui-monospace,Consolas,monospace;font-size:9.5px;color:var(--muted);background:var(--raised);border-radius:5px;padding:3px 6px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.logs-text{flex:1;min-height:180px;margin:0;padding:12px;overflow:auto;font-size:10px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+/* 日志页改成“文件行 + 全宽正文”，窄栏也更稳 */
+.logs-page{height:100%;display:flex;flex-direction:column;min-height:0}
+.logs-layout{display:flex;flex-direction:column;gap:10px;height:100%;min-height:0}
+.logs-list{width:auto;flex:none;max-height:132px;overflow:auto;border-right:0;border-bottom:1px solid var(--line-soft);padding:0 0 8px;display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:4px;align-content:start}
+.logs-list-head{grid-column:1/-1;margin-bottom:2px}
+.logs-body{flex:1;min-height:0;display:flex;flex-direction:column}
+.logs-toolbar{flex-wrap:wrap;align-items:flex-start}
+.logs-toolbar>div:first-child{min-width:0;flex:1}
+.logs-toolbar b{display:block;font-size:12px;overflow-wrap:anywhere}
+.logs-toolbar .button-row{flex:none;margin-left:auto}
+.logs-findings{max-height:42%}
+.logs-text{flex:1;min-height:200px}
+.logs-summary{flex-wrap:wrap}

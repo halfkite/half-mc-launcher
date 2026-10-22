@@ -577,6 +577,21 @@ namespace HalfMcLauncher
                         return Content.RestoreSave(instance, backup);
                     }
 
+                case "logs.files":
+                    return Logs.ListFiles(FindInstance(payload?.Value<string>("id")));
+
+                case "logs.read":
+                    return Logs.ReadFile(FindInstance(payload?.Value<string>("id")), payload.Value<string>("file"));
+
+                case "logs.analyze":
+                    return Logs.Analyze(FindInstance(payload?.Value<string>("id")), payload.Value<string>("file"));
+
+                case "logs.reveal":
+                    {
+                        Logs.Reveal(FindInstance(payload?.Value<string>("id")), payload.Value<string>("file"));
+                        return new JValue(true);
+                    }
+
                 case "task.cancel": return new JValue(Form.Launch.CancelTask(payload?.ToString()));
                 case "logs.export": return new JValue(false);
 
