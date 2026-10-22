@@ -592,6 +592,36 @@ namespace HalfMcLauncher
                         return new JValue(true);
                     }
 
+                case "modpack.export":
+                    {
+                        var instance = FindInstance(payload?.Value<string>("id"));
+                        using (var dialog = new SaveFileDialog
+                        {
+                            Filter = "整包 ZIP|*.zip",
+                            FileName = (instance.Value<string>("name") ?? "整合包") + ".zip"
+                        })
+                        {
+                            if (dialog.ShowDialog(Form) != DialogResult.OK) return JValue.CreateNull();
+                            return Modpacks.Export(instance, dialog.FileName);
+                        }
+                    }
+
+                case "modpack.import":
+                    {
+                        var instance = FindInstance(payload?.Value<string>("id"));
+                        using (var dialog = new OpenFileDialog { Filter = "整合包|*.zip;*.mrpack" })
+                        {
+                            if (dialog.ShowDialog(Form) != DialogResult.OK) return JValue.CreateNull();
+                            return await Modpacks.ImportAsync(instance, dialog.FileName, message => Form.SendEvent("modpackProgress", message), CancellationToken.None);
+                        }
+                    }
+
+                case "modpack.exportPath":
+                    return Modpacks.Export(FindInstance(payload?.Value<string>("id")), payload.Value<string>("path"));
+
+                case "modpack.importPath":
+                    return await Modpacks.ImportAsync(FindInstance(payload?.Value<string>("id")), payload.Value<string>("path"), message => Form.SendEvent("modpackProgress", message), CancellationToken.None);
+
                 case "task.cancel": return new JValue(Form.Launch.CancelTask(payload?.ToString()));
                 case "logs.export": return new JValue(false);
 
