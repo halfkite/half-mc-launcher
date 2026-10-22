@@ -34,6 +34,12 @@ namespace HalfMcLauncher
         public static string LastUrl { get; private set; }
         public static string LastCode { get; private set; }
 
+        /// <summary>外部浏览器全部失败时的兜底：由外壳把页面加载到应用内的 WebView2。</summary>
+        public static Func<string, bool> InAppOpener { get; set; }
+
+        /// <summary>用户显式选择“在启动器内登录”时，跳过所有外部浏览器尝试。</summary>
+        public static bool InAppOnly { get; set; }
+
         public static void Cancel()
         {
             var current = pending;
@@ -466,18 +472,12 @@ namespace HalfMcLauncher
         public static bool OpenInBrowser(string url)
         {
             if (string.IsNullOrEmpty(url)) return false;
-            // 以管理员身份运行时，浏览器以高完整性启动可能读不到自己的配置锁；
-            // 这时先交给 explorer 以普通权限打开，再由桌面按默认浏览器处理。
-            if (IsElevated())
+            if (InAppOnly && InAppOpener != null && InAppOpener(url))
             {
-                if (OpenViaExplorer(url)) return true;
-                if (LaunchDefaultBrowser(url)) return true;
+                Diagnostics.Write("auth open in-app (explicit) " + url);
+                return true;
             }
-            else
-            {
-                if (LaunchDefaultBrowser(url)) return true;
-                if (OpenViaExplorer(url)) return true;
-            }
+            if (LaunchDefaultBrowser(url)) return true;
             try
             {
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
@@ -492,6 +492,11 @@ namespace HalfMcLauncher
                 return true;
             }
             catch (Exception error) { Diagnostics.Write("auth open via cmd failed: " + error.Message); }
+            if (InAppOpener != null && InAppOpener(url))
+            {
+                Diagnostics.Write("auth open in-app " + url);
+                return true;
+            }
             return false;
         }
 

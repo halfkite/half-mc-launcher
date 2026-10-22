@@ -211,10 +211,28 @@ namespace HalfMcLauncher
             Close();
         }
 
+        internal void NavigateAuth(string url)
+        {
+            try { if (web?.CoreWebView2 != null) web.CoreWebView2.Navigate(url); } catch { }
+        }
+
+        internal void ReturnToApp()
+        {
+            try { if (web?.CoreWebView2 != null) web.CoreWebView2.Navigate("https://app.local/index.html"); } catch { }
+        }
+
         private void OnClosing(object sender, FormClosingEventArgs e)
         {
             Diagnostics.Write("closing requested, closing=" + closing);
             if (closing) return;
+            if (MicrosoftAuth.IsPending)
+            {
+                // 应用内登录时页面已经离开启动器，无法完成 closeRequested 握手，直接关闭。
+                closing = true;
+                SaveWindowBounds();
+                Close();
+                return;
+            }
             e.Cancel = true;
             SendEvent("closeRequested", null);
         }

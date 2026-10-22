@@ -34,6 +34,12 @@ namespace HalfMcLauncher
             Diagnostics.Write("start pid=" + System.Diagnostics.Process.GetCurrentProcess().Id + " args=" + string.Join(" ", args ?? Array.Empty<string>()));
             AppPaths.Initialize();
             Diagnostics.Write("paths ready data=" + AppPaths.DataDir);
+            try
+            {
+                using (var identity = System.Security.Principal.WindowsIdentity.GetCurrent())
+                    Diagnostics.Write("elevated=" + new System.Security.Principal.WindowsPrincipal(identity).IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator));
+            }
+            catch { }
 
             if (args != null && args.Any(item => string.Equals(item, "--selftest", StringComparison.OrdinalIgnoreCase)))
                 return SelfTest();

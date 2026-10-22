@@ -173,17 +173,47 @@ namespace HalfMcLauncher
 
                 case "account.login":
                     {
-                        var loginMethod = string.Equals(payload?.ToString(), "device", StringComparison.OrdinalIgnoreCase) ? "device" : "browser";
-                        var account = await MicrosoftAuth.LoginAsync(loginMethod, (type, body) => Form.SendEvent(type, body));
-                        var accounts = Store.State["accounts"] as JArray ?? new JArray();
-                        var uuid = account.Value<string>("uuid");
-                        var cleaned = new JArray(accounts.Where(item => string.Equals(item.Value<string>("uuid"), uuid, StringComparison.OrdinalIgnoreCase)));
-                        cleaned.Add(account);
-                        Store.State["accounts"] = cleaned;
-                        Store.State["selectedAccount"] = account["id"];
-                        Store.Save();
-                        Form.SendEvent("snapshot", Form.BuildSnapshot());
-                        return account;
+                        var requested = (payload?.ToString() ?? "browser").ToLowerInvariant();
+                        var loginMethod = requested == "device" ? "device" : "browser";
+                        var inApp = false;
+                        MicrosoftAuth.InAppOnly = requested == "inapp";
+                        MicrosoftAuth.InAppOpener = url => { Form.NavigateAuth(url); inApp = true; return true; };
+                        try
+                        {
+                            var account = await MicrosoftAuth.LoginAsync(loginMethod, (type, body) => Form.SendEvent(type, body));
+                            var accounts = Store.State["accounts"] as JArray ?? new JArray();
+                            var uuid = account.Value<string>("uuid");
+                            var cleaned = new JArray(accounts.Where(item => string.Equals(item.Value<string>("uuid"), uuid, StringComparison.OrdinalIgnoreCase)));
+                            cleaned.Add(account);
+                            Store.State["accounts"] = cleaned;
+                            Store.State["selectedAccount"] = account["id"];
+                            Store.Save();
+                            Form.SendEvent("snapshot", Form.BuildSnapshot());
+                            return account;
+                        }
+                        catch (Exception error)
+                        {
+                            Store.State["authNotice"] = error.Message;
+                            Store.Save();
+                            throw;
+                        }
+                        finally
+                        {
+                            MicrosoftAuth.InAppOpener = null;
+                            MicrosoftAuth.InAppOnly = false;
+                            if (inApp) Form.ReturnToApp();
+                        }
+                    }
+
+                case "app.takeNotice":
+                    {
+                        var notice = Store.State.Value<string>("authNotice") ?? string.Empty;
+                        if (!string.IsNullOrEmpty(notice))
+                        {
+                            Store.State["authNotice"] = string.Empty;
+                            Store.Save();
+                        }
+                        return new JValue(notice);
                     }
 
                 case "account.cancel":
