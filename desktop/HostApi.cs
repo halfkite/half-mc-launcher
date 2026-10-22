@@ -183,7 +183,8 @@ namespace HalfMcLauncher
                             var account = await MicrosoftAuth.LoginAsync(loginMethod, (type, body) => Form.SendEvent(type, body));
                             var accounts = Store.State["accounts"] as JArray ?? new JArray();
                             var uuid = account.Value<string>("uuid");
-                            var cleaned = new JArray(accounts.Where(item => string.Equals(item.Value<string>("uuid"), uuid, StringComparison.OrdinalIgnoreCase)));
+                            // 只替换同一个 Minecraft 档案的旧记录，其他账号必须保留。
+                            var cleaned = new JArray(accounts.Where(item => !string.Equals(item.Value<string>("uuid"), uuid, StringComparison.OrdinalIgnoreCase)));
                             cleaned.Add(account);
                             Store.State["accounts"] = cleaned;
                             Store.State["selectedAccount"] = account["id"];
