@@ -167,8 +167,8 @@ html.reduce-motion body::before{animation:none}
 .sidebar nav>button{position:relative}
 .sidebar.collapsed nav>button::after{content:attr(data-name);position:absolute;left:calc(100% + 10px);top:50%;transform:translateY(-50%) translateX(-4px);padding:4px 9px;border-radius:7px;background:var(--raised);border:1px solid var(--line);box-shadow:var(--depth-1);color:var(--text);font-size:calc(10px * var(--font-scale,1));white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .12s,transform .12s;z-index:80}
 .sidebar.collapsed nav>button:hover::after{opacity:1;transform:translateY(-50%) translateX(0)}
-.side-account-chips{display:flex;gap:4px;align-items:center}
-.sidebar.collapsed .side-account-chips{position:absolute;left:calc(100% + 8px);bottom:0;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px;box-shadow:var(--depth-2);z-index:40}
+.side-account-chips{position:absolute;left:0;bottom:calc(100% + 8px);display:flex;flex-direction:column;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:5px;box-shadow:var(--depth-2);z-index:40}
+.sidebar.collapsed .side-account-chips{left:50%;transform:translateX(-50%)}
 .sidebar{container-type:inline-size}
 .sidebar nav>button>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .search-shortcut span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
