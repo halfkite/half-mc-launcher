@@ -34,56 +34,6 @@ namespace HalfMcLauncher
             LoadKey();
         }
 
-        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> NameCache = new System.Collections.Concurrent.ConcurrentDictionary<string, string>(StringComparer.Ordinal);
-        private static readonly HttpClient TranslateHttp = new HttpClient { Timeout = TimeSpan.FromSeconds(8) };
-        private static readonly SemaphoreSlim TranslateGate = new SemaphoreSlim(5);
-
-        private static async Task<string> TranslateName(string text, CancellationToken ct)
-        {
-            if (string.IsNullOrWhiteSpace(text)) return text;
-            if (NameCache.TryGetValue(text, out var cached)) return cached;
-            if (Regex.IsMatch(text, "[\u4e00-\u9fff]")) { NameCache[text] = text; return text; }
-            await TranslateGate.WaitAsync(ct).ConfigureAwait(false);
-            try
-            {
-                var url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&dt=t&q=" + Uri.EscapeDataString(text);
-                using (var response = await TranslateHttp.GetAsync(url, ct).ConfigureAwait(false))
-                {
-                    if (!response.IsSuccessStatusCode) return text;
-                    var json = JArray.Parse(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
-                    var parts = json.Count > 0 ? json[0] as JArray : null;
-                    var builder = new StringBuilder();
-                    foreach (var part in parts?.OfType<JArray>() ?? Enumerable.Empty<JArray>())
-                    {
-                        var value = part.FirstOrDefault()?.ToString();
-                        if (!string.IsNullOrEmpty(value)) builder.Append(value);
-                    }
-                    var translated = builder.ToString().Trim();
-                    if (!string.IsNullOrEmpty(translated) && translated != text) NameCache[text] = translated;
-                    return translated.Length > 0 ? translated : text;
-                }
-            }
-            catch { return text; }
-            finally { TranslateGate.Release(); }
-        }
-
-        private static async Task DecorateProjects(JArray projects, CancellationToken ct)
-        {
-            using (var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct))
-            {
-                timeout.CancelAfter(TimeSpan.FromSeconds(3));
-                try
-                {
-                    await Task.WhenAll(projects.OfType<JObject>().Select(async project =>
-                    {
-                        var name = project.Value<string>("name") ?? string.Empty;
-                        var translated = await TranslateName(name, timeout.Token).ConfigureAwait(false);
-                        if (!string.IsNullOrEmpty(translated) && translated != name) project["nameZh"] = translated;
-                    })).ConfigureAwait(false);
-                }
-                catch { }
-            }
-        }
         public bool Configured() { return !string.IsNullOrEmpty(curseKey); }
 
         public bool Configure(string key)
@@ -159,7 +109,7 @@ namespace HalfMcLauncher
                         ["updated"] = hit["date_modified"]?.Value<DateTime?>()?.ToString("o") ?? hit.Value<string>("date_modified") ?? string.Empty
                     });
                 }
-                await DecorateProjects(projects, ct);
+                await McmodNames.Apply(projects, ct);
                 return new JObject { ["total"] = result.Value<int?>("total_hits") ?? projects.Count, ["projects"] = projects };
             }
 
@@ -188,7 +138,7 @@ namespace HalfMcLauncher
                     ["loaders"] = new JArray((entry["latestFilesIndexes"] as JArray ?? new JArray()).Select(item => item.Value<int?>("modLoader")).Where(item => item.HasValue).Select(item => CurseLoaders.FirstOrDefault(pair => pair.Value == item.Value).Key).Where(item => !string.IsNullOrEmpty(item)).Distinct()),
                     ["updated"] = entry["dateModified"]?.Value<DateTime?>()?.ToString("o") ?? entry.Value<string>("dateModified") ?? string.Empty
                 });
-            await DecorateProjects(list, ct);
+            await McmodNames.Apply(list, ct);
             return new JObject { ["total"] = curse["pagination"]?.Value<int?>("totalCount") ?? list.Count, ["projects"] = list };
         }
 
