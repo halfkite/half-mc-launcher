@@ -86,6 +86,7 @@ namespace HalfMcLauncher
             {
                 ["theme"] = "light",
                 ["accent"] = "#74b5ff",
+                ["background"] = "",
                 ["memory"] = 4096,
                 ["java"] = "",
                 ["clientId"] = "",
