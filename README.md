@@ -1,123 +1,87 @@
-# Half Mc Launcher 0.1.0
+# Half Mc Launcher
 
-面向 Windows 的 Minecraft Java 启动器。新工作区默认单栏，可选择五种多栏布局；每栏可以打开完整页面，每个标签保留自己的搜索、筛选和页面状态。当前为 0.1.0 修订版 r5：产品名统一为 Half Mc Launcher，微软登录免配置，并裁剪了安装包体积。
+面向 Windows 的 Minecraft Java 启动器。基于 **.NET Framework 4.8 + WebView2 + Vue 3**，发行形态是约 2.2 MB 的单文件 exe，依赖、前端资源与 WebView2Loader 全部内嵌。
 
-> **开发状态**：Electron 版（`main` 分支、本 README 所述的 `npm run dist`）已冻结，不再新增功能。
-> 后续开发全部在 `refactor/desktop` 分支的 C# + WebView2 单文件版上进行，见 `desktop/README.md`。
+当前版本：**0.1.0-r110**（开发中，尚未签名）
 
-## 直接使用
+- 桌面外壳与构建说明：[desktop/README.md](desktop/README.md)
+- 代码签名与发布：[docs/CODE-SIGNING.md](docs/CODE-SIGNING.md)
+- 许可证：[MIT](LICENSE)
 
-1. 双击 `release/Half-Mc-Launcher-0.1.0-x64.exe`。这是便携版，无需安装 Node.js。
-2. 点击“添加目录”，选择已有 `.minecraft`、`versions` 文件夹，或包含多个独立游戏目录的容器。启动器不会自动迁移已有文件。
-3. 从左下角添加微软或离线账户。微软登录直接点“打开浏览器并授权”，无需填写任何应用 ID；离线账户输入名称即可创建。
-4. 在设置中的 Java 下拉选择已识别版本，也可添加扫描文件夹或指定 java.exe。
-5. 实例卡片中点击“启动”，在任务中心查看进度和日志。
+## 功能
 
-应用必须放在可写目录。配置、浏览器缓存、日志、账户加密缓存和默认下载的游戏保存在可执行文件旁的 `data` 中。把程序放在 D 盘，数据就在 D 盘；不会将便携数据静默改存到用户的 C 盘目录。Windows 和便携程序封装在运行时可能使用系统临时目录。
+- **实例**：多目录扫描、分组、收藏、保护、隔离游戏目录、每实例内存 / Java 覆盖
+- **下载**：原版、Fabric / Forge / NeoForge / Quilt / OptiFine 安装；Modrinth / CurseForge 资源搜索与依赖安装；BMCLAPI 镜像与并发 / 重试 / 超时设置
+- **内容管理**：Mod、资源包、光影、存档、截图；存档 ZIP 备份与还原；资源包 `pack.mcmeta` 与图标
+- **整合包**：`halfpack` 导出，`.mrpack` / CurseForge manifest / ZIP 导入
+- **Java**：本机检测、Adoptium Temurin 8 / 17 / 21 自动下载
+- **诊断**：崩溃日志分析、模组依赖检查、一体式诊断包导出
+- **服务器**：`servers.dat` 查看 / 编辑，Server List Ping 显示人数、版本、MOTD、延迟
+- **账户与外观**：微软 / 离线账户、皮肤与披风预览、截图墙、主题色与底色自定义
+- **模组辅助**：Modrinth 更新检查、机器翻译生成中文资源包、MC百科中文名查询
+- **启动入口**：快捷方式 / 批处理导出、拖拽导入、`--instance` 参数启动
+- **工作区**：多栏布局、标签页、预设、全局搜索与命令面板
 
-## 正版登录：开箱即用
+## 运行要求
 
-登录不再需要填写任何应用信息。点击“微软账户 → 打开浏览器并授权”，系统浏览器会打开 Microsoft 官方页面，授权完成后自动回到启动器并添加账户。
+- Windows 10 1803+ / Windows 11
+- .NET Framework 4.8（系统自带）
+- WebView2 Runtime（Win11 自带；Win10 可通过 Evergreen 安装器安装）
 
-内置的是一个**公开的公共客户端 ID**，取自开源启动器 Prism Launcher（其源码中公开的应用 ID），它已注册个人 Microsoft 账户、桌面回环回调 `http://localhost` 与设备代码登录，并获准访问 Xbox Live / Minecraft 服务。因此授权页面显示的应用名称是 Prism Launcher，而不是 Half；这是借用公共应用的已知代价。
+程序必须放在可写目录。配置、日志、账户缓存、Java 运行时与下载内容都在 exe 旁的 `data/`，不写入用户目录。
 
-- 想换成自己的应用：在设置 → Microsoft 正版登录 → “使用自己的应用 ID”中填写，或在数据目录放置 `client-id.txt`（一行 ID）。两者都优先于内置值。
-- 构建时也可以设置 `HAKF_MICROSOFT_CLIENT_ID` 覆盖内置值。
-- 该公共 ID 不受本项目管理，微软调整应用策略时可能失效；用于公开分发前建议注册自己的应用。
-- 账户密码只输入 Microsoft 官方页面。访问令牌和 MSAL 缓存使用 Electron `safeStorage` 加密；搬到另一台电脑后需要重新登录。
-- 受限于没有真人授权测试，**未验证真人账户登录、令牌自动刷新及实际进入游戏**。
+## 构建
 
-## r4 新增
+需要 Node.js 22、.NET SDK 8、Windows PowerShell 5.1：
 
-- 原版、Fabric、Forge、NeoForge、Quilt、独立 OptiFine 与旧版 LiteLoader，按游戏版本选择具体组件。
-- 推荐/测试版标记、官方与 BMCLAPI 来源、安装 Java 检查、Fabric API 配套勾选。
-- 默认浏览器授权、PKCE 与本机回调、重新打开网页、设备代码备用方式。
-- 六类组件已真实安装并通过启动前校验；[详细范围与验证记录](docs/R4-IMPLEMENTATION.md)。
-
-## r3 新增
-
-- Java 版本下拉、指定目录扫描和搜索目录保存。
-- 离线账户、自动内存、实例 Mod 管理、90%–150% 字体调节。
-- 游戏、Mod、资源包、光影合并为下载入口；Modrinth 已真实联网下载安装，支持必要依赖与完整性校验。
-- CurseForge 接入已实现，需配置项目自己的 API 密钥；当前未进行真实密钥联网验证。
-- [详细功能、边界和根因修复记录](docs/R3-IMPLEMENTATION.md)。
-
-## 已实现
-
-- 默认单栏，另有左右双栏、上下双栏、左单右双、左双右单、四栏；分隔线可拖动或双击均分，也可聚焦后用方向键调整。
-- 右上角悬停展开布局选择。缩减分栏数量时保留隐藏栏的标签，切回后可继续使用。
-- 标签关闭、新建、复制、固定、排序与跨栏拖动；新标签默认实例页。
-- 页面、标签、布局比例、搜索、分组、资源筛选等状态自动保存；正常关闭时先保存最新工作区。
-- 工作区预设、全局搜索与命令面板。
-- 多目录扫描、重复实例去重、标准版本描述读取、常见加载器标识、名称与分组、收藏。
-- 独立游戏目录与共享根目录模式；通过已有 mods/saves 目录辅助判断，仍可在实例设置中调整。
-- 设置内存、Java、主题、减少动画。深浅主题、预设配色与自定义颜色即时生效并自动保存；每个实例可覆盖内存和 Java。
-- 侧栏支持拖动和自动折叠；工作区操作合并至单行标题栏；支持标签右键菜单、恢复关闭标签、临时最大化分栏。
-- 实例支持加载器筛选、路径搜索和排序；开启实例保护后阻止删除、移除和覆盖安装。
-- 官方原版下载、Fabric Loader 安装、已有可解析版本的启动服务。
-- 全局任务进度、任务取消、运行状态、结束游戏确认、日志筛选与导出。
-- 账户管理界面、设备代码登录实现、账户切换、凭据保存、静默刷新实现及清理缓存入口。
-- 内置示例扩展：命令注册与启动前事件；开发接口见 `docs/PLUGIN-SDK.md`。
-
-## 操作与注意事项
-
-- 左侧模块导航作用于当前聚焦的分栏；固定标签保留原页面，切换模块会新建标签。
-- `Ctrl+T` 新建标签，`Ctrl+W` 关闭未固定的当前标签，`Ctrl+Shift+T` 恢复关闭标签，`Ctrl+Tab` 切换标签，`Ctrl+B` 折叠侧栏，`Ctrl+K` 打开命令面板，`/` 聚焦当前实例搜索；`Ctrl+0` 单栏，`Ctrl+1–5` 切换五种多栏布局。
-- 复制标签只复制页面状态；实例文件复制属于后续功能。
-- 安装页默认写入程序目录旁的 `data/minecraft`。已有目录若包含多个游戏根目录，请单独登记目标 `.minecraft` 后再选择它作为安装位置。
-- 自动 Java 匹配优先使用版本描述要求的相同主版本。提供下拉选择和目录扫描，尚不提供自动下载 Java。
-- 已有 Forge、NeoForge 等版本能否运行取决于描述、组件与依赖是否完整；r4 验证了指定版本的多种组件安装路径，不承诺全部历史版本、混合组件及整合包兼容。
-- 删除先选择“仅移除记录”或“移至回收站”。后者还需原生窗口确认完整路径；共享资源不删除。存在父版本依赖时阻止删除，包括已隐藏的依赖记录。
-- “仅移除记录”后，移除该目录的登记，再重新添加目录即可重新识别记录。
-- 目录识别支持标准 `versions/<id>/<id>.json` 结构。Prism/MultiMC 特有组件格式、任意深度的目录递归、所有第三方启动器的专有隔离配置不在首版兼容保证内。
-- 任务和界面中的日志保留本次会话的有限条数；完整输出持续写入 `data/logs`。后台下载取消后可重新安装，已校验文件可复用；首版不承诺关机后自动恢复下载任务。
-- 当前没有配置代码签名证书。可执行文件不应被描述为已签名发布。
-
-## 后续路线图
-
-整合包安装、批量 Mod 更新、皮肤披风编辑、实例复制与对比、备份快照恢复、更多加载器安装、更完整的模组冲突检测、外部插件安装和权限管理、多语言与自动更新。
-
-## 本地开发与构建
-
-要求 Node.js 24。首次使用：
-
-```text
+```powershell
 npm ci
-npm run dev
+npm run build
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\desktop-package.ps1
 ```
+
+输出：`dist-desktop/Half-Mc-Launcher-<version>.exe`（单文件）。
+
+可用环境变量：
+
+| 变量 | 用途 |
+| --- | --- |
+| `DOTNET_EXE` | 指定 `dotnet.exe` 路径 |
+| `HF_SIGN_PFX` / `HF_SIGN_PASSWORD` | 打包后使用 PFX 签名 |
+| `HF_SIGN_THUMBPRINT` | 使用证书库中指定指纹的证书签名 |
+| `HF_SIGN_SUBJECT` | 按证书主题选择签名证书 |
+
+签名细节见 [docs/CODE-SIGNING.md](docs/CODE-SIGNING.md)。
+
+## 测试
+
+```powershell
+npm test                 # 前端核心单元测试
+npm run desktop:test     # 实例扫描 / 配置 / Java 检测 / 启动参数
+```
+
+## 目录
 
 ```text
-npm run build                  # 类型检查和构建
-npm test                       # 核心自动化测试
-node scripts/smoke.mjs          # Electron 桌面交互与会话恢复
-node scripts/r4-auth-smoke.mjs  # 浏览器授权生命周期（不进行真人授权）
-node scripts/r4-smoke.mjs       # 六类组件真实安装与启动前校验，需测试 Java 21
-node scripts/features-smoke.mjs # 新功能桌面与真实资源下载（专用临时目录）
-node scripts/install-smoke.mjs  # 真实联网安装与启动前校验，会下载游戏资源
-npm run dist                   # Windows 便携 EXE
+desktop/          C# WebView2 外壳、启动与下载逻辑
+src/              Vue 3 界面
+shared/           前后端共享模型、外观与工作区定义
+scripts/          构建、打包、签名与冒烟脚本
+docs/             实现记录、代码签名、插件 SDK 等文档
 ```
 
-测试使用临时目录或 `.test-install`，不修改用户现有游戏目录。`.test-install` 用于复用下载文件，不进入发行包。
+## 账户与隐私
 
-## 关于安装包体积
+- 微软登录使用公开的公共客户端 ID（来自 Prism Launcher），授权页面显示的应用名称为 Prism Launcher；可在设置中换成自己的应用 ID。
+- 访问令牌与 MSAL 缓存经 Windows DPAPI 加密保存在 `data/accounts.bin`，不随配置导出。
+- 启动器不包含遥测；崩溃诊断包需要手动导出，且会脱敏账户名称、UUID、皮肤与客户端 ID。
 
-便携 EXE 的体积几乎全部来自 Electron 运行时：`electron.exe` 本身约 250 MB，界面与业务代码只有约 2.5 MB。`npm run dist` 会做以下裁剪：
+## 历史
 
-- `scripts/after-pack.cjs` 删除界面用不到的 `dxcompiler.dll`（WebGPU）、`electron_wer.dll` 与 `resources/elevate.exe`；
-- 只保留 `zh-CN`/`en-US` 两个语言包；
-- 最高压缩级别（7z/LZMA）。
+早期 Electron 外壳（`npm run dist`）已冻结，仅作历史实现保留；当前开发全部在 `desktop/` 目录的 C# + WebView2 外壳上。
 
-即便如此，Electron 便携包的下限仍在 80–90 MB。要做到 HMCL（Java，依赖本机 JRE）或 PCL2（C#/.NET，依赖系统 .NET）那种几 MB 到几十 MB 的体积，只能换掉外壳。
+## 许可证
 
-## 重构分支：C# + WebView2 外壳
+[MIT](LICENSE) © 2026 Hakf
 
-`refactor/desktop` 分支用 **.NET Framework 4.8 + WebView2** 替换 Electron：界面仍然是同一份 Vue 构建产物，宿主负责窗口、数据目录和 IPC。当前产物是 **单文件 2.14 MB**（依赖与前端资源全部嵌入 exe），已接入实例扫描、设置/工作区、离线账户、Java 检测与游戏启动；加载器安装、资源下载、微软登录尚未接入。
-
-```text
-npm run desktop        # 编译并输出单文件 dist-desktop/Half-Mc-Launcher-0.1.0.exe
-npm run desktop:test   # 扫描 / 配置 / Java 检测 / 启动参数的冒烟测试
-```
-
-细节与后续阶段见 `desktop/README.md`。
-
-采用 Electron、Vue 3、TypeScript、XMCL、MSAL。锁文件固定实际依赖。XMCL 上游发布包的元数据修正见 `docs/DEPENDENCY-FIXES.md`，由 `npm ci` 后的准备脚本自动执行。运行时依赖的第三方声明随包分发。
+第三方依赖声明见 [build/THIRD-PARTY-NOTICES.txt](build/THIRD-PARTY-NOTICES.txt)。
