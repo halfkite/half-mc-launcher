@@ -1,0 +1,89 @@
+name: desktop-release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      SIGNPATH_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build web and package desktop exe
+        shell: powershell
+        run: |
+          npm run build
+          .\scripts\desktop-package.ps1
+
+      - name: Upload unsigned exe
+        id: unsigned
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-unsigned
+          path: dist-desktop/Half-Mc-Launcher-*.exe
+          if-no-files-found: error
+
+      # 只有配置了 SignPath 的项目变量与 API Token 时才会执行。
+      # 变量：SIGNPATH_ORG_ID / SIGNPATH_PROJECT_SLUG / SIGNPATH_POLICY_SLUG /
+      #       SIGNPATH_ARTIFACT_CONFIG_SLUG；密钥：SIGNPATH_API_TOKEN。
+      - name: Submit exe to SignPath
+        if: ${{ env.SIGNPATH_TOKEN != '' }}
+        uses: signpath/github-action-submit-signing-request@v2
+        with:
+          organization-id: ${{ vars.SIGNPATH_ORG_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG }}
+          api-token: ${{ env.SIGNPATH_TOKEN }}
+          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIG_SLUG }}
+          wait-for-completion: true
+          output-artifact-directory: signed
+
+      - name: Replace unsigned exe with signed one
+        if: ${{ env.SIGNPATH_TOKEN != '' }}
+        shell: powershell
+        run: |
+          $signed = Get-ChildItem signed -Recurse -Filter 'Half-Mc-Launcher-*.exe' |
+            Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          if (-not $signed) { throw '没有找到 SignPath 返回的已签名 exe' }
+          Copy-Item $signed.FullName (Join-Path 'dist-desktop' $signed.Name) -Force
+          Write-Host "已替换为签名版本：$($signed.Name)"
+
+      - name: Upload signed exe
+        if: ${{ env.SIGNPATH_TOKEN != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-signed
+          path: dist-desktop/Half-Mc-Launcher-*.exe
+          if-no-files-found: error
+
+      - name: Publish GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist-desktop/Half-Mc-Launcher-*.exe
+          generate_release_notes: true

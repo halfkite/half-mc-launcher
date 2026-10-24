@@ -70,6 +70,9 @@ npm run desktop:test    # 运行实例扫描 / 配置读写 / Java 检测 / 启�
 要求：Windows + .NET Framework 4.8（系统自带）+ WebView2 运行时；构建需要 .NET SDK 8 或更高，
 可用 `DOTNET_EXE` 指定 `dotnet.exe` 路径。
 
+代码签名（本机 PFX / 证书库 / 开源 SignPath）与 GitHub Actions 发布流程见
+[docs/CODE-SIGNING.md](../docs/CODE-SIGNING.md)。
+
 当前产物：**单文件 2.14 MB**，没有附带 DLL。分发时只发这一个 exe，首次运行会在旁边生成 `data/`
 （配置、日志、WebView2 用户数据、解压出来的前端资源与 `WebView2Loader.dll`）。
 

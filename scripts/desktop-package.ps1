@@ -46,6 +46,16 @@ try {
   $notices = Join-Path $root 'build/THIRD-PARTY-NOTICES.txt'
   if (Test-Path $notices) { Copy-Item $notices (Join-Path (Split-Path $target) 'THIRD-PARTY-NOTICES.txt') -Force }
 
+  # 提供了代码签名证书环境变量时才签名，避免无证书环境下构建失败。
+  if ($env:HF_SIGN_PFX -or $env:HF_SIGN_THUMBPRINT -or $env:HF_SIGN_SUBJECT) {
+    $signArgs = @{ File = $target }
+    if ($env:HF_SIGN_PFX) { $signArgs.Pfx = $env:HF_SIGN_PFX }
+    if ($env:HF_SIGN_PASSWORD) { $signArgs.Password = $env:HF_SIGN_PASSWORD }
+    if ($env:HF_SIGN_THUMBPRINT) { $signArgs.Thumbprint = $env:HF_SIGN_THUMBPRINT }
+    if ($env:HF_SIGN_SUBJECT) { $signArgs.Subject = $env:HF_SIGN_SUBJECT }
+    & (Join-Path $PSScriptRoot 'sign-desktop.ps1') @signArgs
+  }
+
   # 未签名的 exe 从资源管理器直接双击时，Windows 可能弹出“未知发布者”提示。
   # 附带一个批处理入口，通过 CreateProcess 启动，可绕开该提示。
   $launcher = Join-Path (Split-Path $target) 'Start Launcher.cmd'
