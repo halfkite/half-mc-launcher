@@ -5,7 +5,7 @@
 当前版本：**0.1.0-r110**（开发中，尚未签名）
 
 - 桌面外壳与构建说明：[desktop/README.md](desktop/README.md)
-- 代码签名与发布：[docs/CODE-SIGNING.md](docs/CODE-SIGNING.md)
+- 代码签名与发布：[docs/CODE-SIGNING.md](docs/CODE-SIGNING.md)`n- 功能验证记录：[docs/VERIFICATION.md](docs/VERIFICATION.md)
 - 许可证：[MIT](LICENSE)
 
 ## 功能
